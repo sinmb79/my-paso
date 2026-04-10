@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hello! My Paso!</string>
+    <string name="title_activity_main">Hello! My Paso!</string>
+    <string name="package_name">com.mypaso.app</string>
+    <string name="custom_url_scheme">com.mypaso.app</string>
+</resources>
