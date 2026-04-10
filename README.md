@@ -99,3 +99,11 @@ npm run build
 - [Phase 0 스펙](../hello-my-paso_phase0_spec.md)
 - [Local-First 보강 문서](../hello-my-paso_local-first_addendum.md)
 - [구현 계획](../docs/superpowers/plans/2026-04-08-phase0-foundation.md)
+
+## 모바일 문서
+
+안드로이드 재현 문서와 iOS 인계 문서는 아래 링크에서 바로 볼 수 있습니다.  
+Android reproduction notes and the iOS handoff guide are available below.
+
+- [Android Setup](./docs/mobile/android-setup.md)
+- [iOS Handoff](./docs/mobile/ios-handoff.md)
