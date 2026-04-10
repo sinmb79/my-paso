@@ -8,6 +8,9 @@ This document defines a delivery path that finishes Android deployment readiness
 이번 단계의 기준 아키텍처는 `Next.js static export + Capacitor shell + 기존 wa-sqlite 유지`다. 안드로이드는 윈도우에서 직접 빌드와 에뮬레이터 검증까지 수행하고, iOS는 macOS/Xcode가 필요한 마지막 서명과 실행만 남기도록 준비한다.  
 The baseline architecture for this phase is `Next.js static export + Capacitor shell + existing wa-sqlite`. Android will be built and verified on Windows, while iOS will be prepared so that only the final signing and simulator/device execution remain for macOS/Xcode.
 
+웹 배포와 모바일 배포는 같은 코드베이스를 공유하지만 같은 빌드 프로필을 쓰지 않는다. `GitHub Pages`용 빌드는 기존 `basePath`를 유지하고, 모바일 빌드는 `basePath=""`, `assetPrefix=""`를 강제하는 별도 플래그 또는 프로필로 분리한다.  
+Web and mobile share the same codebase, but they do not use the same build profile. GitHub Pages keeps the existing `basePath`, while mobile builds must force `basePath=""` and `assetPrefix=""` through a dedicated flag or profile.
+
 ## Why This Path
 
 현재 저장소는 `Next.js 16 + output: "export" + wa-sqlite + PWA`로 이미 로컬 퍼스트 구조가 정리되어 있다. 따라서 웹 코드를 버리고 React Native로 재작성하는 것보다, Capacitor로 네이티브 셸을 입혀 재사용률을 높이는 편이 비용과 리스크가 가장 낮다.  
@@ -21,6 +24,7 @@ The repository already has a clean local-first structure based on `Next.js 16 + 
 | 데이터 원칙 | 핵심 기록 데이터는 계속 온디바이스에만 저장 |
 | 앱 구조 | 웹 코드베이스는 하나로 유지하고, Capacitor는 얇은 네이티브 셸 역할만 수행 |
 | 배포 목표 | Android APK/AAB 빌드 가능 상태, iOS Xcode 프로젝트/권한/서명 handoff 완료 |
+| 설정 분기 | `next.config.ts`는 GitHub Pages와 모바일 build profile을 명시적으로 분리해야 함 |
 
 | Item | Detail |
 | --- | --- |
@@ -28,6 +32,7 @@ The repository already has a clean local-first structure based on `Next.js 16 + 
 | Data principle | Core journal data must remain on-device only |
 | App structure | Keep one shared web codebase, with Capacitor acting as a thin native shell |
 | Delivery target | Android APK/AAB readiness, plus iOS Xcode project and signing handoff readiness |
+| Config split | `next.config.ts` must explicitly separate GitHub Pages and mobile build profiles |
 
 ## Architecture
 
@@ -47,11 +52,14 @@ flowchart LR
 안드로이드와 iOS는 같은 `out/` 산출물을 사용한다. 웹 앱 내부 로직은 유지하고, 네이티브 플러그인은 `Capacitor.isNativePlatform()` 기준으로 필요한 경우에만 호출한다.  
 Android and iOS will consume the same `out/` web bundle. The existing web logic remains intact, and native plugins are only invoked when `Capacitor.isNativePlatform()` indicates a native environment.
 
+단, 이 `out/`은 모바일 전용 export여야 한다. `GITHUB_ACTIONS=true`로 생성된 GitHub Pages 번들은 `/my-paso/...` 경로를 포함하므로 Capacitor 앱에서 그대로 쓰면 안 된다.  
+However, that `out/` bundle must be a mobile-specific export. A GitHub Pages bundle built with `GITHUB_ACTIONS=true` contains `/my-paso/...` paths and must not be reused inside Capacitor.
+
 ## Component Plan
 
 | 구성요소 | 역할 | 이번 단계 |
 | --- | --- | --- |
-| `capacitor.config.ts` | 앱 식별자, `webDir`, 스킴, 플러그인 기본값 관리 | 생성 및 검증 |
+| `capacitor.config.ts` | 앱 식별자, `webDir`, 스킴, 플러그인 기본값 관리 | 기존 파일 보강 및 검증 |
 | `android/` | Android Studio 프로젝트 | 생성, sync, debug build, emulator smoke test |
 | `ios/` | Xcode 프로젝트 | 생성, 권한 설정 초안, macOS handoff |
 | `src/lib/native/*` | 플랫폼 감지 및 네이티브 API 래퍼 | 추가 |
@@ -61,7 +69,7 @@ Android and iOS will consume the same `out/` web bundle. The existing web logic 
 
 | Component | Responsibility | This phase |
 | --- | --- | --- |
-| `capacitor.config.ts` | Manage app ID, `webDir`, scheme, and plugin defaults | Create and validate |
+| `capacitor.config.ts` | Manage app ID, `webDir`, scheme, and plugin defaults | Update and validate the existing file |
 | `android/` | Android Studio project | Create, sync, debug build, emulator smoke test |
 | `ios/` | Xcode project | Create, draft permissions, macOS handoff |
 | `src/lib/native/*` | Platform detection and native API wrappers | Add |
@@ -73,6 +81,31 @@ Android and iOS will consume the same `out/` web bundle. The existing web logic 
 
 기존 `wa-sqlite` 스키마와 쿼리는 유지한다. 이번 단계에서는 저장소 백엔드를 성급하게 바꾸지 않고, 먼저 Capacitor WebView 안에서 현재 로컬 DB가 안정적으로 동작하는지 확인한다. 네이티브 저장소 전환은 실제 WebView 제한이 확인될 때만 별도 작업으로 분리한다.  
 The existing `wa-sqlite` schema and queries remain unchanged. This phase validates that the current local database works inside Capacitor WebView before considering any storage backend change. A native storage migration only happens if a concrete WebView limitation appears.
+
+현재 구현 기준 영속성 조건은 `indexedDB`와 `navigator.locks`가 모두 존재할 때만 `indexeddb` 모드가 선택되고, 아니면 자동으로 `memory` 모드로 떨어진다. 따라서 모바일 검증의 핵심 acceptance test는 `initializeDatabase()` 이후 `storageMode === "indexeddb"`를 확인하고, 앱 재실행 뒤에도 방문/리뷰/XP 데이터가 남는지 확인하는 것이다.  
+With the current implementation, persistence only uses `indexeddb` mode when both `indexedDB` and `navigator.locks` are available; otherwise it silently falls back to `memory`. The critical mobile acceptance test is therefore to verify `storageMode === "indexeddb"` after `initializeDatabase()` and confirm visits/reviews/XP still exist after a cold restart.
+
+만약 Android WebView나 iOS WKWebView에서 이 조건이 충족되지 않으면 즉시 실패로 기록하고, 후속 작업으로 `@capacitor-community/sqlite` 또는 다른 네이티브 저장소 백엔드를 도입하는 경로를 분리한다. 이번 단계에서는 그 대체안을 구현하지 않고, 실패를 재현 가능하게 남기는 데 집중한다.  
+If Android WebView or iOS WKWebView does not satisfy those conditions, that result is treated as a concrete failure signal and split into a follow-up task for `@capacitor-community/sqlite` or another native storage backend. This phase does not implement the fallback backend; it focuses on making the failure reproducible.
+
+## Permission Matrix
+
+| 기능 | Android 권한/설정 | iOS 권한/설정 | 거부 시 UX |
+| --- | --- | --- | --- |
+| Geolocation | `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` | `NSLocationWhenInUseUsageDescription` | 기능 비활성화, 수동 기록 흐름 유지, 설정 이동 안내 |
+| Camera | `CAMERA` | `NSCameraUsageDescription` | 사진 첨부 UI 숨김 또는 비활성화, 텍스트 기록은 유지 |
+| Filesystem | 추가 런타임 권한 없이 앱 전용 저장소 우선 | 앱 샌드박스 저장소 | 백업/복원 버튼에서 실패 이유 표시 |
+| Preferences | 별도 권한 없음 | 별도 권한 없음 | 기본값으로 계속 동작 |
+
+| Capability | Android permission/config | iOS permission/config | Denial UX |
+| --- | --- | --- | --- |
+| Geolocation | `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` | `NSLocationWhenInUseUsageDescription` | Disable the feature, keep manual journaling, and offer a settings prompt |
+| Camera | `CAMERA` | `NSCameraUsageDescription` | Hide or disable photo attachment while preserving text journaling |
+| Filesystem | Prefer app-private storage with no extra runtime permission | App sandbox storage | Show a clear backup/restore failure reason |
+| Preferences | No extra permission | No extra permission | Continue with defaults |
+
+권한 요청은 앱 시작 시 일괄 요청하지 않고, 사용자가 해당 기능에 처음 진입할 때만 요청한다. 거부된 경우 앱 전체를 막지 않고 해당 기능만 비활성화한다.  
+Permissions are not requested upfront at app launch. Each permission is requested only when the user enters the corresponding feature for the first time, and a denial disables only that feature rather than blocking the whole app.
 
 ## Native Capability Scope
 
@@ -106,6 +139,9 @@ The existing `wa-sqlite` schema and queries remain unchanged. This phase validat
 | Android phone test | 세로 폰 에뮬레이터에서 홈/맵/저널 렌더 확인 |
 | Android tablet test | 가로 태블릿 에뮬레이터에서 레이아웃 확인 |
 | 로컬 데이터 유지 | 앱 재시작 후 seed/기록/XP 상태 유지 |
+| Geolocation smoke | 권한 요청, 허용/거부 분기, 위치값 또는 graceful fallback 확인 |
+| Camera smoke | 권한 요청과 취소/거부 처리 확인 |
+| Filesystem smoke | 로컬 백업 파일 쓰기 또는 실패 메시지 확인 |
 | iOS readiness | `ios/` 프로젝트 생성, 권한/서명/handoff 문서 완성 |
 
 | Verification axis | Pass criteria |
@@ -116,7 +152,32 @@ The existing `wa-sqlite` schema and queries remain unchanged. This phase validat
 | Android phone test | Home/map/journal render in a portrait phone emulator |
 | Android tablet test | Layout looks correct in a landscape tablet emulator |
 | Local data persistence | Seed, journal, and XP state survive app restarts |
+| Geolocation smoke | Verify permission prompt, allow/deny branches, and either a position result or graceful fallback |
+| Camera smoke | Verify permission prompt and cancel/deny handling |
+| Filesystem smoke | Verify local backup file write or a clear failure message |
 | iOS readiness | `ios/` project exists and permissions/signing/handoff docs are complete |
+
+## Reproducible Command Surface
+
+| 단계 | 명령 또는 조건 |
+| --- | --- |
+| Node 확인 | `node -v`가 22 이상이어야 함 |
+| Android 준비 | JDK 17+, Android Studio, `platform-tools`, emulator, system image 설치 |
+| 웹 회귀 | `npm install`, `npm run test`, `npm run lint`, `npm run build` |
+| 모바일 export | 모바일 profile 기준으로 `npm run build` |
+| Capacitor sync | `npx cap sync android`, `npx cap sync ios` |
+| Android 실행 | `emulator -avd <name>`, `adb devices`, Android Studio 또는 Gradle debug build |
+| iOS 인계 | macOS에서 `npx cap open ios` 후 Xcode signing 설정 |
+
+| Step | Command or requirement |
+| --- | --- |
+| Verify Node | `node -v` must be 22 or higher |
+| Prepare Android | Install JDK 17+, Android Studio, `platform-tools`, emulator, and a system image |
+| Web regression | `npm install`, `npm run test`, `npm run lint`, `npm run build` |
+| Mobile export | Run `npm run build` under the mobile profile |
+| Capacitor sync | `npx cap sync android`, `npx cap sync ios` |
+| Android run | `emulator -avd <name>`, `adb devices`, then build/debug through Android Studio or Gradle |
+| iOS handoff | On macOS, run `npx cap open ios` and complete signing in Xcode |
 
 ## Deliverables
 
