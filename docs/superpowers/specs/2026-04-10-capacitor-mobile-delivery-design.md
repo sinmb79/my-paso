@@ -11,6 +11,9 @@ The baseline architecture for this phase is `Next.js static export + Capacitor s
 웹 배포와 모바일 배포는 같은 코드베이스를 공유하지만 같은 빌드 프로필을 쓰지 않는다. `GitHub Pages`용 빌드는 기존 `basePath`를 유지하고, 모바일 빌드는 `basePath=""`, `assetPrefix=""`를 강제하는 별도 플래그 또는 프로필로 분리한다.  
 Web and mobile share the same codebase, but they do not use the same build profile. GitHub Pages keeps the existing `basePath`, while mobile builds must force `basePath=""` and `assetPrefix=""` through a dedicated flag or profile.
 
+이 설계는 저장소에 `build:mobile` 스크립트를 추가하는 것을 전제로 한다. 기준 명령은 `MY_PASO_BUILD_TARGET=mobile npm run build:mobile` 또는 동등한 Windows 호환 스크립트이며, Capacitor는 이 산출물만 사용한다.  
+This design assumes the repository adds a `build:mobile` script. The canonical command is `MY_PASO_BUILD_TARGET=mobile npm run build:mobile` or an equivalent Windows-compatible wrapper, and Capacitor must consume only that output.
+
 ## Why This Path
 
 현재 저장소는 `Next.js 16 + output: "export" + wa-sqlite + PWA`로 이미 로컬 퍼스트 구조가 정리되어 있다. 따라서 웹 코드를 버리고 React Native로 재작성하는 것보다, Capacitor로 네이티브 셸을 입혀 재사용률을 높이는 편이 비용과 리스크가 가장 낮다.  
@@ -88,6 +91,9 @@ With the current implementation, persistence only uses `indexeddb` mode when bot
 만약 Android WebView나 iOS WKWebView에서 이 조건이 충족되지 않으면 즉시 실패로 기록하고, 후속 작업으로 `@capacitor-community/sqlite` 또는 다른 네이티브 저장소 백엔드를 도입하는 경로를 분리한다. 이번 단계에서는 그 대체안을 구현하지 않고, 실패를 재현 가능하게 남기는 데 집중한다.  
 If Android WebView or iOS WKWebView does not satisfy those conditions, that result is treated as a concrete failure signal and split into a follow-up task for `@capacitor-community/sqlite` or another native storage backend. This phase does not implement the fallback backend; it focuses on making the failure reproducible.
 
+이번 단계의 합격 기준은 `Android에서 indexeddb 영속성 확인`이다. iOS는 윈도우에서 직접 검증할 수 없으므로, `ios/` 프로젝트와 검증 체크리스트를 준비하고 `WKWebView persistence smoke test`를 macOS handoff 항목으로 넘긴다. 만약 macOS 검증에서 `memory` 모드로 떨어지면 iOS 배포는 차단하고 네이티브 저장소 후속 작업을 먼저 수행한다.  
+The pass condition for this phase is `verified indexeddb persistence on Android`. Because iOS cannot be directly validated from Windows, the `ios/` project and a `WKWebView persistence smoke test` are handed off as explicit macOS tasks. If macOS validation shows a `memory` fallback, iOS release is blocked until a native storage follow-up is completed.
+
 ## Permission Matrix
 
 | 기능 | Android 권한/설정 | iOS 권한/설정 | 거부 시 UX |
@@ -164,7 +170,8 @@ Permissions are not requested upfront at app launch. Each permission is requeste
 | Node 확인 | `node -v`가 22 이상이어야 함 |
 | Android 준비 | JDK 17+, Android Studio, `platform-tools`, emulator, system image 설치 |
 | 웹 회귀 | `npm install`, `npm run test`, `npm run lint`, `npm run build` |
-| 모바일 export | 모바일 profile 기준으로 `npm run build` |
+| 모바일 스크립트 추가 | `package.json`에 `build:mobile`, `cap:sync`, `cap:android`, `cap:ios` 추가 |
+| 모바일 export | `MY_PASO_BUILD_TARGET=mobile npm run build:mobile` 또는 동등한 Windows 스크립트 |
 | Capacitor sync | `npx cap sync android`, `npx cap sync ios` |
 | Android 실행 | `emulator -avd <name>`, `adb devices`, Android Studio 또는 Gradle debug build |
 | iOS 인계 | macOS에서 `npx cap open ios` 후 Xcode signing 설정 |
@@ -174,7 +181,8 @@ Permissions are not requested upfront at app launch. Each permission is requeste
 | Verify Node | `node -v` must be 22 or higher |
 | Prepare Android | Install JDK 17+, Android Studio, `platform-tools`, emulator, and a system image |
 | Web regression | `npm install`, `npm run test`, `npm run lint`, `npm run build` |
-| Mobile export | Run `npm run build` under the mobile profile |
+| Add mobile scripts | Add `build:mobile`, `cap:sync`, `cap:android`, and `cap:ios` to `package.json` |
+| Mobile export | Run `MY_PASO_BUILD_TARGET=mobile npm run build:mobile` or an equivalent Windows wrapper |
 | Capacitor sync | `npx cap sync android`, `npx cap sync ios` |
 | Android run | `emulator -avd <name>`, `adb devices`, then build/debug through Android Studio or Gradle |
 | iOS handoff | On macOS, run `npx cap open ios` and complete signing in Xcode |
