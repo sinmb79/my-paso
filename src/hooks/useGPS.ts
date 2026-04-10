@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+  type GPSPosition,
   getCurrentPosition,
   requestPermissions,
 } from "@/lib/geo/gps-tracker";
@@ -11,7 +12,7 @@ type GPSState = {
   error: string | null;
   loading: boolean;
   permissionGranted: boolean;
-  position: GeolocationPosition | null;
+  position: GPSPosition | null;
 };
 
 const INITIAL_STATE: GPSState = {

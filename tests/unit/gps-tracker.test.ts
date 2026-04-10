@@ -46,7 +46,18 @@ describe("gps tracker", () => {
 
     const { getCurrentPosition } = await import("@/lib/geo/gps-tracker");
 
-    await expect(getCurrentPosition()).resolves.toEqual(geolocationState.position);
+    await expect(getCurrentPosition()).resolves.toEqual({
+      coords: {
+        accuracy: 5,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        latitude: 37.5663,
+        longitude: 126.9779,
+        speed: null,
+      },
+      timestamp: 1,
+    });
   });
 
   it("reports permission access as granted when native permission succeeds", async () => {
