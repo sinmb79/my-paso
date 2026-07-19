@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: "com.mypaso.app",
   appName: "Hello! My Paso!",
   webDir: "out",
+  loggingBehavior: "none",
   server: {
     androidScheme: "https",
   },

@@ -13,6 +13,7 @@
 # testing
 /coverage
 /tests/.tmp/
+/output/
 
 # next.js
 /.next/
@@ -24,6 +25,12 @@
 # misc
 .DS_Store
 *.pem
+
+# Android signing material must remain outside the repository.
+*.keystore
+*.jks
+**/keystore.properties
+**/my-paso-upload.properties
 
 # debug
 npm-debug.log*

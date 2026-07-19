@@ -45,7 +45,10 @@ export async function takePhoto() {
     const photo = await Camera.getPhoto({
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Prompt,
-      quality: 90,
+      quality: 82,
+      width: 1600,
+      height: 1600,
+      correctOrientation: true,
     });
 
     return photo.dataUrl ?? null;

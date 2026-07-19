@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#0c0a09"/>
+  <circle cx="96" cy="76" r="28" fill="none" stroke="#fbbf24" stroke-width="6"/>
+  <path d="M96 104 C96 104 60 130 60 150 Q60 168 96 168 Q132 168 132 150 C132 130 96 104 96 104Z" fill="#fbbf24" opacity="0.3"/>
+  <circle cx="96" cy="76" r="8" fill="#fbbf24"/>
+  <text x="96" y="156" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#fbbf24">PASO</text>
+</svg>

@@ -23,6 +23,14 @@ export interface POI {
   base_xp: number;
 }
 
+export interface PlaceSummary extends POI {
+  is_saved: boolean;
+  is_visited: boolean;
+  visit_count: number;
+  last_visited_at?: string;
+  tags: string[];
+}
+
 export interface XPBreakdown {
   base_visit: number;
   first_visit_bonus: number;
@@ -44,6 +52,7 @@ export interface Visit {
   gps_accuracy_m?: number;
   memo?: string;
   mood?: string;
+  verification_mode?: "manual" | "gps";
   photo_ids: string[];
   xp_earned: number;
   xp_breakdown: XPBreakdown;
@@ -96,6 +105,8 @@ export interface CreateVisitInput {
   gpsAccuracyM?: number;
   memo?: string;
   mood?: string;
+  photoIds?: string[];
+  verificationMode?: "manual" | "gps";
 }
 
 export interface CreateReviewInput {
@@ -116,8 +127,23 @@ export interface XPLogEntry {
   note?: string;
 }
 
+export interface PlaceCollectionSnapshot {
+  poi_id: string;
+  is_saved: boolean;
+  saved_at?: string;
+  personal_note?: string;
+  tags: string[];
+}
+
+export interface JournalPhotoSnapshot {
+  id: string;
+  data_url: string;
+}
+
 export interface PasoSnapshot {
   version: string;
+  schema_version?: number;
+  app_version?: string;
   exported_at: string;
   profile: Profile;
   stats: Stats;
@@ -125,6 +151,17 @@ export interface PasoSnapshot {
   reviews: Review[];
   pois: POI[];
   xp_log: XPLogEntry[];
+  place_collections?: PlaceCollectionSnapshot[];
+  media?: JournalPhotoSnapshot[];
+  record_counts?: {
+    pois: number;
+    visits: number;
+    reviews: number;
+    xp_log: number;
+    place_collections?: number;
+    media?: number;
+  };
+  checksum?: string;
 }
 
 export interface DatabaseOptions {

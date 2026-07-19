@@ -6,18 +6,25 @@ import { useLocalDB } from "@/hooks/useLocalDB";
 import {
   createReview,
   createVisit,
-  getPOIs,
+  getPlaceSummaries,
   getProfile,
   getRecentReviews,
   getRecentVisits,
   getStats,
+  setPOISaved,
+  setPOITags,
 } from "@/lib/db/queries";
+import {
+  assertDurableStorage,
+  canWriteDurably,
+} from "@/lib/db/storage-guard";
 import { loadSeedPOIs } from "@/lib/poi/seed-loader";
 import type {
   CreateReviewInput,
   CreateVisitInput,
+  DatabaseStorageMode,
   PasoDatabase,
-  POI,
+  PlaceSummary,
   Profile,
   Review,
   Stats,
@@ -25,7 +32,7 @@ import type {
 } from "@/types";
 
 type PasoJournalData = {
-  pois: POI[];
+  pois: PlaceSummary[];
   profile: Profile;
   recentReviews: Review[];
   recentVisits: Visit[];
@@ -50,17 +57,21 @@ type PasoJournalState =
 export type PasoJournalController = {
   status: PasoJournalState["status"];
   error: Error | null;
-  pois: POI[];
+  pois: PlaceSummary[];
   profile: Profile;
   recentReviews: Review[];
   recentVisits: Visit[];
-  selectedPoi: POI | null;
+  selectedPoi: PlaceSummary | null;
   selectedVisit: Visit | null;
   stats: Stats;
   database: PasoDatabase | null;
+  canPersist: boolean;
+  storageMode: DatabaseStorageMode | null;
   setSelectedPoiId: (poiId: string) => void;
   recordVisit: (input: CreateVisitInput) => Promise<Visit>;
   saveReview: (input: CreateReviewInput) => Promise<Review>;
+  toggleSaved: (poiId: string, saved: boolean) => Promise<void>;
+  updatePoiTags: (poiId: string, tags: string[]) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -98,7 +109,7 @@ function createEmptyState(): PasoJournalData {
 
 async function loadJournalSnapshot(database: PasoDatabase, limit: number) {
   await loadSeedPOIs(database);
-  const pois = await getPOIs(database, 100);
+  const pois = await getPlaceSummaries(database, { limit: 100 });
   const profile = await getProfile(database);
   const stats = await getStats(database);
   const recentVisits = await getRecentVisits(database, limit);
@@ -113,7 +124,7 @@ async function loadJournalSnapshot(database: PasoDatabase, limit: number) {
   };
 }
 
-export function usePasoJournal(limit = 8): PasoJournalController {
+export function usePasoJournal(limit = -1): PasoJournalController {
   const localDatabase = useLocalDB();
   const [state, setState] = useState<PasoJournalState>({
     status: "loading",
@@ -218,6 +229,7 @@ export function usePasoJournal(limit = 8): PasoJournalController {
         throw new Error("Local database is not ready.");
       }
 
+      assertDurableStorage(localDatabase.database);
       const visit = await createVisit(localDatabase.database, input);
       await refreshSnapshot(localDatabase.database);
       return visit;
@@ -227,9 +239,28 @@ export function usePasoJournal(limit = 8): PasoJournalController {
         throw new Error("Local database is not ready.");
       }
 
+      assertDurableStorage(localDatabase.database);
       const review = await createReview(localDatabase.database, input);
       await refreshSnapshot(localDatabase.database);
       return review;
+    },
+    async toggleSaved(poiId: string, saved: boolean) {
+      if (localDatabase.status !== "ready") {
+        throw new Error("Local database is not ready.");
+      }
+
+      assertDurableStorage(localDatabase.database);
+      await setPOISaved(localDatabase.database, poiId, saved);
+      await refreshSnapshot(localDatabase.database);
+    },
+    async updatePoiTags(poiId: string, tags: string[]) {
+      if (localDatabase.status !== "ready") {
+        throw new Error("Local database is not ready.");
+      }
+
+      assertDurableStorage(localDatabase.database);
+      await setPOITags(localDatabase.database, poiId, tags);
+      await refreshSnapshot(localDatabase.database);
     },
     async refresh() {
       if (localDatabase.status !== "ready") {
@@ -240,5 +271,12 @@ export function usePasoJournal(limit = 8): PasoJournalController {
     },
     database:
       localDatabase.status === "ready" ? localDatabase.database : null,
+    canPersist:
+      localDatabase.status === "ready" &&
+      canWriteDurably(localDatabase.database),
+    storageMode:
+      localDatabase.status === "ready"
+        ? localDatabase.database.storageMode
+        : null,
   };
 }

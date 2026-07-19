@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; }
+  body { width: 1024px; height: 500px; }
+  .banner {
+    width: 1024px; height: 500px;
+    background-image:
+      linear-gradient(90deg, rgba(12,10,9,0.98) 0%, rgba(12,10,9,0.90) 35%, rgba(12,10,9,0.18) 72%, rgba(12,10,9,0.28) 100%),
+      url('../../../public/brand/paso-memory-trail-hero.webp');
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .texture {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), transparent 35%, rgba(0,0,0,0.18));
+  }
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 520px;
+    margin-left: 70px;
+    position: relative;
+    z-index: 1;
+  }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fbbf24;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    margin-bottom: 20px;
+  }
+  .mark {
+    width: 36px;
+    height: 36px;
+    border: 2px solid rgba(251,191,36,0.72);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fbbf24;
+    font-size: 23px;
+    letter-spacing: 0;
+  }
+  .title {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 61px;
+    font-weight: 900;
+    line-height: 1.02;
+    color: #fffaf0;
+    letter-spacing: -2px;
+    text-shadow: 0 3px 26px rgba(0,0,0,0.55);
+  }
+  .title span { color: #fbbf24; }
+  .subtitle {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 23px;
+    font-weight: 500;
+    color: #e7e5e4;
+    margin-top: 18px;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.7);
+  }
+  .tags {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .tag {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff8e1;
+    background: rgba(12,10,9,0.62);
+    border: 1px solid rgba(251,191,36,0.48);
+    padding: 8px 16px;
+    border-radius: 100px;
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="texture"></div>
+  <div class="content">
+    <div class="eyebrow"><span class="mark">P</span>PRIVATE MEMORY TRAIL</div>
+    <div class="title">Hello! My <span>Paso!</span></div>
+    <div class="subtitle">장소의 순간을, 나만의 여정으로</div>
+    <div class="tags">
+      <div class="tag">LOCAL-FIRST</div>
+      <div class="tag">OFFLINE</div>
+      <div class="tag">NO TRACKING</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

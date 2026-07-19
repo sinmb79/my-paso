@@ -1,45 +1,44 @@
 # Hello! My Paso!
 
-This is a local-first travel journal shell that runs immediately without public API keys.  
-For the Korean-first explanation, see [README.md](./README.md).
+Hello! My Paso! is a local-first place-memory app that runs without public API keys or accounts. Discover and save places, record GPS-verified or manual visits, and keep photos and reflections on-device. See [README.md](./README.md) for the Korean-first guide.
 
-## Overview
+## Product Flow
 
 ```mermaid
 flowchart LR
-  Seed["Dummy / live seed"] --> Loader["loadSeedPOIs()"]
-  Loader --> DB["wa-sqlite<br/>browser SQLite"]
-  DB --> Map["Map shell / Focused POI"]
-  DB --> Journal["Visits / reviews / XP"]
-  Journal --> Export["JSON backup / restore"]
+  Seed["Dummy/live seed"] --> DB["wa-sqlite + IndexedDB"]
+  DB --> Map["Offline map / discovery"]
+  DB --> Collection["Save / tags / search"]
+  Collection --> Journal["GPS or manual visits / photos / reflections"]
+  Journal --> Insight["Timeline / monthly recap / achievements"]
+  Journal --> Export["Checksummed JSON + photo backup"]
 ```
 
-## What Works Today
+## What Works
 
 | Area | Status |
 | --- | --- |
-| App shell | Next.js App Router with static export support |
-| Local DB | `wa-sqlite` in the browser |
-| Seed data | 100 bundled dummy POIs by default |
-| Live replacement seam | `seed:live` and `seed:merge` scripts |
-| Map | Safe fallback when Mapbox token is missing |
-| Journal | Local visits, reviews, XP, profile updates |
-| Backup | JSON export and restore |
-| Public hosting | Compatible with GitHub Pages |
+| App | Static Next.js app with Capacitor Android/iOS projects |
+| Local DB | `wa-sqlite` + IndexedDB; writes are blocked in volatile fallback mode |
+| Seed | 100 bundled POIs for keyless testing plus live replacement scripts |
+| Map and discovery | Offline map plus name, region, and personal-tag search |
+| Personal collection | Saved state and tags stay separate from replaceable POI seeds |
+| Journal | GPS/manual verification, photos, reflections, and a dated timeline |
+| Insights | Monthly recap, exact level progress, and evidence-based achievements |
+| Backup | Validated, atomic restore of records, saved state, and referenced photos |
 
 ## Key Paths
 
 | Path | Responsibility |
 | --- | --- |
-| `src/app/page.tsx` | Home server shell |
-| `src/components/home/HomeWorkspace.tsx` | Client entry for the home page |
-| `src/components/map/MapView.tsx` | Map/fallback/focused POI UI |
-| `src/components/home/PasoJournal.tsx` | Visit, review, backup/restore UI |
-| `src/hooks/usePasoJournal.ts` | Shared local state and actions |
-| `src/lib/db/*` | SQLite bootstrap, migrations, queries |
-| `src/lib/export/json-export.ts` | Snapshot export and restore |
-| `src/lib/poi/pois-dummy.json` | Bundled POI seed |
-| `scripts/seed-pois.mjs` | Dummy generation, live fetch, merge |
+| `src/components/home/HomeWorkspace.tsx` | Product screen and tab orchestration |
+| `src/components/tabs/*` | Map, Explore, Journal, and Profile screens |
+| `src/hooks/usePasoJournal.ts` | Local state and durable-write gate |
+| `src/lib/db/*` | Versioned SQLite migrations and queries |
+| `src/lib/media/photo-store.ts` | Web IndexedDB/native-file photo storage |
+| `src/lib/export/json-export.ts` | Snapshot validation and compensating restore |
+| `src/lib/poi/pois-dummy.json` | Bundled 100-POI seed |
+| `scripts/seed-pois.mjs` | Dummy generation and live-data merge |
 
 ## Quick Start
 
@@ -49,42 +48,33 @@ npm run seed:dummy
 npm run dev
 ```
 
-Open `http://localhost:3000` and you should see the fallback map and local journal even without a Mapbox token.
+Open `http://localhost:3000` to exercise core flows without Mapbox or public API keys.
 
-## Seed Commands
+## Seed Replacement
 
 ```bash
-# Regenerate the bundled 100-item dummy seed
 npm run seed:dummy
-
-# Build a bundle directly from configured public endpoints
 npm run seed:live
-
-# Merge pre-fetched JSON exports into the bundled seed
 npm run seed:merge -- --tour=./tmp/tourapi.json --heritage=./tmp/heritage.json
 ```
 
-Environment variables expected in `.env.example`:
+Keep secrets in `.env` and never commit them. See [.env.example](./.env.example) for supported variables.
 
-```bash
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
-TOUR_API_URL=
-TOUR_API_KEY=
-HERITAGE_API_URL=
-CHA_API_KEY=
-```
+## Backup and Permissions
 
-## Backup and Restore
-
-The home screen exposes:
-
-- `Export local JSON`: saves the current local snapshot
-- `Import local JSON`: replaces the current local state with an imported snapshot
+- The Profile tab exports places, visits, reflections, XP, saved state, tags, and referenced photos to JSON.
+- Imports verify version, record counts, references, and SHA-256 checksum before previewing the restore.
+- Database and media changes are compensated if restore fails.
+- Location is used only after the user taps **Check current location**; there is no background tracking.
+- Camera or photo access occurs only when the user adds a visit photo.
+- Backups can contain location and photo data and are not separately encrypted.
 
 ## Verification
 
 ```bash
-npm run test
+npm test
 npm run lint
 npm run build
+npm run build:mobile
+npm run cap:sync:android
 ```

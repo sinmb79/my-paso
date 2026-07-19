@@ -13,6 +13,8 @@ const filesystemState = {
   result: { uri: "file:///documents/paso-backup.json" },
 };
 
+const shareMock = vi.fn(async () => ({ activityType: "test" }));
+
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: () => capacitorState.isNative,
@@ -44,11 +46,19 @@ vi.mock("@capacitor/filesystem", () => ({
   },
 }));
 
+vi.mock("@capacitor/share", () => ({
+  Share: {
+    canShare: vi.fn(async () => ({ value: true })),
+    share: shareMock,
+  },
+}));
+
 describe("native wrappers", () => {
   beforeEach(() => {
     capacitorState.isNative = false;
     capacitorState.platform = "web";
     localStorage.clear();
+    shareMock.mockClear();
   });
 
   it("reports the active platform through Capacitor", async () => {
@@ -89,5 +99,25 @@ describe("native wrappers", () => {
     await expect(
       writeBackupFile("paso-backup.json", "{\"hello\":\"paso\"}"),
     ).resolves.toBe("file:///documents/paso-backup.json");
+  });
+
+  it("opens the native share sheet for a written backup", async () => {
+    capacitorState.isNative = true;
+    capacitorState.platform = "android";
+
+    const { shareBackupFile } = await import("@/lib/native/share");
+
+    await expect(
+      shareBackupFile(
+        "file:///documents/paso-backup.json",
+        "paso-backup.json",
+      ),
+    ).resolves.toBe(true);
+    expect(shareMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        files: ["file:///documents/paso-backup.json"],
+        dialogTitle: "백업 파일 보관하기",
+      }),
+    );
   });
 });

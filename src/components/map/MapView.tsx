@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 
-import { getMapboxAccessToken } from "@/lib/config/env";
+import { OfflineMapCanvas } from "@/components/map/OfflineMapCanvas";
 import { getPOIMarkerColor, getPOIPopupLabel } from "@/components/map/POIMarker";
+import { getMapboxAccessToken } from "@/lib/config/env";
 import type { POI, Visit } from "@/types";
 
 type MapViewProps = {
@@ -14,100 +15,16 @@ type MapViewProps = {
   selectedPoi: POI | null;
   recentVisits: Visit[];
   onSelectPoi: (poiId: string) => void;
+  fullscreen?: boolean;
 };
-
-function MapFallback({
-  count,
-  selectedPoi,
-  recentVisits,
-  onSelectPoi,
-  pois,
-}: {
-  count: number;
-  selectedPoi: POI | null;
-  recentVisits: Visit[];
-  onSelectPoi: (poiId: string) => void;
-  pois: POI[];
-}) {
-  const selectedVisit = selectedPoi
-    ? recentVisits.find((visit) => visit.poi_id === selectedPoi.id) ?? null
-    : null;
-
-  return (
-    <section className="rounded-[1.75rem] border border-stone-800 bg-stone-900/70 p-8">
-      <h2 className="text-2xl font-semibold tracking-tight text-stone-50">
-        Map preview unavailable
-      </h2>
-      <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-300 sm:text-base">
-        Configure <code>NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code> to activate the
-        live Mapbox canvas. Until then, the local-first shell still boots with
-        bundled POI data and a working browser database.
-      </p>
-      <p className="mt-6 text-sm font-medium uppercase tracking-[0.28em] text-amber-300/90">
-        {count} bundled dummy POIs are ready
-      </p>
-      <div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[1.5rem] border border-stone-800 bg-stone-950/60 p-5">
-          <h3 className="text-lg font-semibold text-stone-50">Focused POI</h3>
-          {selectedPoi ? (
-            <>
-              <p className="mt-3 text-sm uppercase tracking-[0.2em] text-amber-300/80">
-                {selectedPoi.category.replaceAll("_", " ")}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-stone-50">
-                {selectedPoi.name}
-              </p>
-              <p className="mt-2 text-sm leading-7 text-stone-300">
-                {selectedPoi.description ??
-                  "Bundled local-first POI ready for journal and review testing."}
-              </p>
-              <p className="mt-4 text-sm text-stone-400">
-                {selectedPoi.region} / {selectedPoi.district}
-              </p>
-              <p className="mt-2 text-sm text-stone-400">
-                Base XP {selectedPoi.base_xp}
-              </p>
-              <p className="mt-4 text-sm text-emerald-200">
-                {selectedVisit
-                  ? `Last local visit: ${new Date(selectedVisit.arrived_at).toLocaleString("ko-KR")}`
-                  : "No local visit recorded yet for this POI."}
-              </p>
-            </>
-          ) : null}
-        </div>
-        <div className="rounded-[1.5rem] border border-stone-800 bg-stone-950/60 p-5">
-          <h3 className="text-lg font-semibold text-stone-50">
-            Quick Focus Picks
-          </h3>
-          <div className="mt-4 grid gap-2">
-            {pois.slice(0, 6).map((poi) => (
-              <button
-                key={poi.id}
-                type="button"
-                onClick={() => onSelectPoi(poi.id)}
-                className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
-                  poi.id === selectedPoi?.id
-                    ? "border-amber-300 bg-amber-300/10 text-amber-100"
-                    : "border-stone-800 text-stone-300 hover:border-stone-700"
-                }`}
-              >
-                {poi.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export function MapView({
   pois,
   status,
   error,
   selectedPoi,
-  recentVisits,
   onSelectPoi,
+  fullscreen = false,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const token = getMapboxAccessToken();
@@ -174,65 +91,94 @@ export function MapView({
 
   if (status === "loading") {
     return (
-      <section className="rounded-[1.75rem] border border-stone-800 bg-stone-900/70 p-8">
-        <p className="text-sm uppercase tracking-[0.28em] text-amber-300/90">
-          Preparing local database
-        </p>
-        <p className="mt-4 text-base leading-7 text-stone-300">
-          Loading bundled POIs into the browser-first SQLite layer.
-        </p>
+      <section
+        className={
+          fullscreen
+            ? "flex h-full items-center justify-center px-6"
+            : "rounded-[1.75rem] border p-8"
+        }
+        style={{ backgroundColor: "var(--map-land)", borderColor: "var(--border)" }}
+      >
+        <div className="text-center">
+          <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+            로컬 지도를 준비하고 있어요
+          </p>
+          <p className="mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
+            번들 장소 데이터를 기기 저장소에서 불러오는 중입니다
+          </p>
+        </div>
       </section>
     );
   }
 
   if (status === "error") {
     return (
-      <section className="rounded-[1.75rem] border border-red-500/40 bg-red-950/30 p-8">
-        <h2 className="text-2xl font-semibold tracking-tight text-stone-50">
-          Local database unavailable
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-stone-300">
-          {error?.message ?? "The map shell could not initialize local storage."}
-        </p>
+      <section
+        className={
+          fullscreen
+            ? "flex h-full items-center justify-center px-6"
+            : "rounded-[1.75rem] border p-8"
+        }
+        style={{ backgroundColor: "var(--error-bg)", borderColor: "var(--error)" }}
+      >
+        <div className="max-w-sm text-center">
+          <h2 className="text-lg font-bold" style={{ color: "var(--error)" }}>
+            로컬 지도를 열 수 없어요
+          </h2>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+            {error?.message ?? "기기 저장소를 초기화하지 못했습니다."}
+          </p>
+        </div>
       </section>
     );
   }
 
   if (!token) {
     return (
-      <MapFallback
-        count={pois.length}
-        selectedPoi={selectedPoi}
-        recentVisits={recentVisits}
-        onSelectPoi={onSelectPoi}
+      <OfflineMapCanvas
         pois={pois}
+        selectedPoi={selectedPoi}
+        onSelectPoi={onSelectPoi}
+        fullscreen={fullscreen}
       />
     );
   }
 
   return (
-    <section className="rounded-[1.75rem] border border-stone-800 bg-stone-900/70 p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-stone-50">
-            Local Map Shell
-          </h2>
-          <p className="mt-2 text-sm leading-7 text-stone-300">
-            Live map mode is active with bundled POIs seeded into browser SQLite.
+    <section
+      className={
+        fullscreen
+          ? "h-full bg-stone-900/70"
+          : "rounded-[1.75rem] border border-stone-800 bg-stone-900/70 p-4 sm:p-6"
+      }
+    >
+      {!fullscreen ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-stone-50">
+              실시간 지도
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-stone-300">
+              번들 장소 데이터가 지도에 표시됩니다.
+            </p>
+          </div>
+          <p className="text-sm font-medium uppercase tracking-[0.28em] text-amber-300/90">
+            {pois.length} POIs
           </p>
         </div>
-        <p className="text-sm font-medium uppercase tracking-[0.28em] text-amber-300/90">
-          {pois.length} POIs loaded
-        </p>
-      </div>
+      ) : null}
       <div
         ref={mapContainerRef}
-        className="h-[420px] rounded-[1.25rem] border border-stone-800"
+        className={
+          fullscreen
+            ? "h-full"
+            : "h-[420px] rounded-[1.25rem] border border-stone-800"
+        }
       />
-      {selectedPoi ? (
+      {selectedPoi && !fullscreen ? (
         <div className="mt-4 rounded-[1.25rem] border border-stone-800 bg-stone-950/50 px-4 py-4">
           <p className="text-sm uppercase tracking-[0.22em] text-amber-300/80">
-            Focused POI
+            선택한 장소
           </p>
           <h3 className="mt-2 text-xl font-semibold text-stone-50">
             {selectedPoi.name}

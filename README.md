@@ -1,45 +1,44 @@
 # Hello! My Paso!
 
-API 키가 없어도 바로 실행되는 로컬-퍼스트 여행 기록 앱 셸입니다.  
-영문 설명은 [README.en.md](./README.en.md)에서 따로 볼 수 있습니다.
+API 키와 계정 없이 바로 실행되는 로컬-퍼스트 장소 기억 앱입니다. 장소를 발견하고 저장한 뒤, 현장 또는 수동 방문과 사진·감상을 기기 안에 쌓습니다. 영문 설명은 [README.en.md](./README.en.md)에서 별도로 제공합니다.
 
-## 한눈에 보기
+## 제품 흐름
 
 ```mermaid
 flowchart LR
-  Seed["더미/실데이터 시드"] --> Loader["loadSeedPOIs()"]
-  Loader --> DB["wa-sqlite<br/>브라우저 SQLite"]
-  DB --> Map["맵 셸 / Focused POI"]
-  DB --> Journal["방문 / 리뷰 / XP"]
-  Journal --> Export["JSON 백업/복원"]
+  Seed["더미/실데이터 시드"] --> DB["wa-sqlite + IndexedDB"]
+  DB --> Map["오프라인 지도 / 장소 탐색"]
+  DB --> Collection["저장 / 태그 / 검색"]
+  Collection --> Journal["GPS·수동 방문 / 사진 / 회고"]
+  Journal --> Insight["타임라인 / 월간 회고 / 성취"]
+  Journal --> Export["체크섬 JSON + 사진 백업"]
 ```
 
 ## 지금 되는 것
 
 | 항목 | 설명 |
 | --- | --- |
-| 앱 셸 | Next.js App Router 기반 정적 배포 가능 구조 |
-| 로컬 DB | `wa-sqlite` + 브라우저 저장소 |
-| 더미 시드 | 기본 100개 POI 번들 포함 |
-| 실데이터 교체 경로 | `seed:live`, `seed:merge` 스크립트 제공 |
-| 맵 화면 | Mapbox 토큰이 없어도 fallback UI 동작 |
-| 저널 흐름 | 방문 기록, 리뷰 저장, XP/프로필 갱신 |
-| 백업/복원 | `Export local JSON`, `Import local JSON` 지원 |
-| 공개배포 | GitHub Pages 정적 호스팅 대응 |
+| 앱 | Next.js 정적 앱 + Capacitor Android/iOS 프로젝트 |
+| 로컬 DB | `wa-sqlite` + IndexedDB, 휘발성 폴백에서는 쓰기 차단 |
+| 시드 | API 키 없이 테스트 가능한 100개 POI 번들, 실데이터 교체 스크립트 포함 |
+| 지도·탐색 | Mapbox 토큰 없는 오프라인 지도, 이름·지역·개인 태그 검색 |
+| 개인 컬렉션 | 교체 가능한 시드와 분리된 저장 상태·태그·방문 상태 |
+| 저널 | GPS 확인/수동 방문 구분, 사진, 감상, 날짜별 타임라인 |
+| 회고 | 월간 요약, 정확한 레벨 진행, 실제 데이터 기반 성취 |
+| 백업 | 전체 기록·사진·저장 정보를 SHA-256과 참조 무결성 검사 후 원자적으로 복원 |
 
-## 시스템 구조
+## 핵심 경로
 
 | 경로 | 역할 |
 | --- | --- |
-| `src/app/page.tsx` | 홈 화면 서버 셸 |
-| `src/components/home/HomeWorkspace.tsx` | 홈 화면 클라이언트 진입점 |
-| `src/components/map/MapView.tsx` | 맵/fallback/focused POI UI |
-| `src/components/home/PasoJournal.tsx` | 방문, 리뷰, 백업/복원 UI |
-| `src/hooks/usePasoJournal.ts` | 로컬 상태와 액션 통합 훅 |
-| `src/lib/db/*` | SQLite 초기화, 마이그레이션, 쿼리 |
-| `src/lib/export/json-export.ts` | snapshot export / restore |
-| `src/lib/poi/pois-dummy.json` | 기본 POI 시드 |
-| `scripts/seed-pois.mjs` | 더미 생성, 실데이터 fetch, 병합 스크립트 |
+| `src/components/home/HomeWorkspace.tsx` | 앱 화면과 탭 상태 통합 |
+| `src/components/tabs/*` | 지도, 탐색, 저널, 프로필 화면 |
+| `src/hooks/usePasoJournal.ts` | 로컬 상태와 쓰기 안전 게이트 |
+| `src/lib/db/*` | 버전드 SQLite 마이그레이션과 쿼리 |
+| `src/lib/media/photo-store.ts` | 웹 IndexedDB/네이티브 파일 사진 저장소 |
+| `src/lib/export/json-export.ts` | 스냅샷 검증·내보내기·보상 복원 |
+| `src/lib/poi/pois-dummy.json` | 기본 100개 POI 시드 |
+| `scripts/seed-pois.mjs` | 더미 생성, 실데이터 수집·병합 |
 
 ## 빠른 시작
 
@@ -49,61 +48,41 @@ npm run seed:dummy
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3000`을 열면, Mapbox 토큰이 없어도 fallback 맵과 로컬 저널 화면을 바로 확인할 수 있습니다.
+`http://localhost:3000`에서 Mapbox나 공공 API 키 없이 주요 흐름을 확인할 수 있습니다.
 
 ## 시드 교체
 
 ```bash
-# 더미 100건 재생성
 npm run seed:dummy
-
-# 공공 API 엔드포인트에서 직접 번들 생성
 npm run seed:live
-
-# 미리 받아둔 JSON 파일을 병합해 번들 생성
 npm run seed:merge -- --tour=./tmp/tourapi.json --heritage=./tmp/heritage.json
 ```
 
-`.env.example`에 필요한 항목:
+비밀 키는 `.env`에만 두고 저장소에는 커밋하지 않습니다. 필요한 변수는 [.env.example](./.env.example)을 참고하세요.
 
-```bash
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
-TOUR_API_URL=
-TOUR_API_KEY=
-HERITAGE_API_URL=
-CHA_API_KEY=
-```
+## 백업과 권한
 
-주의:
-- 실제 키 파일이나 `.env`는 저장소에 올리지 않습니다.
-- 로컬 비밀 저장소에서 읽어 실행하는 방식으로만 사용합니다.
-
-## 백업과 복원
-
-홈 화면 상단의 버튼으로 현재 로컬 데이터를 JSON으로 내보내거나 다시 불러올 수 있습니다.
-
-- `Export local JSON`: 현재 기기 데이터를 snapshot으로 저장
-- `Import local JSON`: 선택한 snapshot으로 현재 로컬 상태를 교체
+- 프로필의 **내 데이터 보관**에서 장소, 방문, 감상, XP, 저장·태그와 참조 사진을 JSON으로 내보냅니다.
+- 가져오기는 버전, 건수, 참조, SHA-256 체크섬을 검사하고 미리보기를 보여준 뒤 실행합니다.
+- 복원 중 오류가 나면 DB와 사진을 원래 상태로 되돌립니다.
+- 위치는 사용자가 **현재 위치 확인**을 누를 때만 사용하며 백그라운드 추적은 하지 않습니다.
+- 카메라·사진은 사용자가 방문 사진을 추가할 때만 사용합니다.
+- JSON에는 위치와 사진이 포함될 수 있고 별도 암호화되지 않으므로 안전하게 보관해야 합니다.
 
 ## 검증
 
 ```bash
-npm run test
+npm test
 npm run lint
 npm run build
+npm run build:mobile
+npm run cap:sync:android
 ```
 
-## 관련 문서
+## 문서
 
 - [영문 설명서](./README.en.md)
-- [Phase 0 스펙](../hello-my-paso_phase0_spec.md)
-- [Local-First 보강 문서](../hello-my-paso_local-first_addendum.md)
-- [구현 계획](../docs/superpowers/plans/2026-04-08-phase0-foundation.md)
-
-## 모바일 문서
-
-안드로이드 재현 문서와 iOS 인계 문서는 아래 링크에서 바로 볼 수 있습니다.  
-Android reproduction notes and the iOS handoff guide are available below.
-
-- [Android Setup](./docs/mobile/android-setup.md)
-- [iOS Handoff](./docs/mobile/ios-handoff.md)
+- [Android 설정](./docs/mobile/android-setup.md)
+- [iOS 인계](./docs/mobile/ios-handoff.md)
+- [제품 정렬 분석](./docs/product/2026-07-19-benchmark-and-concept-alignment.md)
+- [제품 보완 로드맵](./docs/superpowers/plans/2026-07-19-product-alignment-roadmap.md)

@@ -2,12 +2,16 @@ import { getLevelForXp } from "@/lib/xp/level-table";
 
 import type { XPBreakdown } from "@/types";
 
-export function calculateVisitXP(baseXp: number, isFirstVisit: boolean) {
+export function calculateVisitXP(
+  baseXp: number,
+  isFirstVisit: boolean,
+  photoCount = 0,
+) {
   const breakdown: XPBreakdown = {
     base_visit: baseXp,
     first_visit_bonus: isFirstVisit ? 10 : 0,
     review_bonus: 0,
-    photo_bonus: 0,
+    photo_bonus: photoCount > 0 ? 5 : 0,
     streak_bonus: 0,
   };
 

@@ -1,6 +1,6 @@
 {
   "name": "my-paso",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,6 +16,9 @@
     "cap:sync:ios": "npx cap sync ios",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
+    "android:bundle:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-release.ps1",
+    "android:assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-android-brand-assets.ps1",
+    "play:assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-play-assets.ps1",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -28,9 +31,10 @@
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/ios": "^8.3.0",
     "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
     "idb": "^8.0.3",
     "mapbox-gl": "^3.21.0",
-    "next": "16.2.2",
+    "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "wa-sqlite": "^1.0.0"
@@ -46,12 +50,15 @@
     "@vitejs/plugin-react": "^6.0.1",
     "cross-env": "^10.1.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.2",
+    "eslint-config-next": "16.2.10",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.3"
+  },
+  "overrides": {
+    "postcss": "8.5.19"
   }
 }

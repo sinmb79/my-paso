@@ -36,6 +36,7 @@ describe("seed script", () => {
 
     const pois = JSON.parse(readFileSync(outputFile, "utf8")) as Array<{
       id: string;
+      name: string;
       source: string;
       region: string;
     }>;
@@ -43,8 +44,9 @@ describe("seed script", () => {
     expect(pois).toHaveLength(12);
     expect(pois[0]).toMatchObject({
       id: "dummy-poi-1",
+      name: "테스트 문화유산 01",
       source: "dummy",
-      region: "Seoul",
+      region: "서울",
     });
     expect(new Set(pois.map((poi) => poi.id)).size).toBe(12);
   });

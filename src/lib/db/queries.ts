@@ -1,10 +1,12 @@
 import { deriveLevel, calculateReviewXP, calculateVisitXP } from "@/lib/xp/xp-engine";
+import { withImmediateTransaction } from "@/lib/db/transaction";
 
 import type {
   CreateReviewInput,
   CreateVisitInput,
   PasoDatabase,
   POI,
+  PlaceSummary,
   Profile,
   Review,
   Stats,
@@ -170,6 +172,17 @@ async function syncProfileAndStats(database: PasoDatabase) {
   const totalReviews = asNumber(totals?.[2]);
   const totalXp = asNumber(totals?.[3]);
   const level = deriveLevel(totalXp);
+  const photoResult = await database.sqlite3.execWithParams(
+    database.db,
+    `
+      SELECT photo_ids FROM visits
+      UNION ALL
+      SELECT photo_ids FROM reviews;
+    `,
+  );
+  const totalPhotos = new Set(
+    photoResult.rows.flatMap(([photoIds]) => asStringArray(photoIds)),
+  ).size;
 
   await database.sqlite3.execWithParams(
     database.db,
@@ -191,12 +204,13 @@ async function syncProfileAndStats(database: PasoDatabase) {
         total_visits = ?,
         unique_pois_visited = ?,
         total_reviews = ?,
+        total_photos = ?,
         total_xp = ?,
         level = ?,
         updated_at = datetime('now')
       WHERE id = 1;
     `,
-    [totalVisits, uniquePoisVisited, totalReviews, totalXp, level],
+    [totalVisits, uniquePoisVisited, totalReviews, totalPhotos, totalXp, level],
   );
 }
 
@@ -303,6 +317,260 @@ export async function getPOIs(database: PasoDatabase, limit = 100) {
   );
 }
 
+export function getAllPOIs(database: PasoDatabase) {
+  return getPOIs(database, -1);
+}
+
+export type PlaceStateFilter = "all" | "saved" | "visited";
+
+export type PlaceSearchOptions = {
+  query?: string;
+  category?: POI["category"];
+  state?: PlaceStateFilter;
+  limit?: number;
+};
+
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+export async function getPlaceSummaries(
+  database: PasoDatabase,
+  options: PlaceSearchOptions = {},
+): Promise<PlaceSummary[]> {
+  const conditions: string[] = [];
+  const bindings: Array<string | number> = [];
+  const query = options.query?.trim();
+
+  if (query) {
+    const pattern = `%${escapeLike(query)}%`;
+    conditions.push(`
+      (
+        p.name LIKE ? ESCAPE '\\' COLLATE NOCASE OR
+        COALESCE(p.description, '') LIKE ? ESCAPE '\\' COLLATE NOCASE OR
+        COALESCE(p.region, '') LIKE ? ESCAPE '\\' COLLATE NOCASE OR
+        COALESCE(p.district, '') LIKE ? ESCAPE '\\' COLLATE NOCASE OR
+        EXISTS (
+          SELECT 1
+          FROM poi_tags search_pt
+          JOIN tags search_t ON search_t.id = search_pt.tag_id
+          WHERE search_pt.poi_id = p.id
+            AND search_t.name LIKE ? ESCAPE '\\' COLLATE NOCASE
+        )
+      )
+    `);
+    bindings.push(pattern, pattern, pattern, pattern, pattern);
+  }
+
+  if (options.category) {
+    conditions.push("p.category = ?");
+    bindings.push(options.category);
+  }
+
+  if (options.state === "saved") {
+    conditions.push("COALESCE(user_state.is_saved, 0) = 1");
+  } else if (options.state === "visited") {
+    conditions.push("EXISTS (SELECT 1 FROM visits state_visit WHERE state_visit.poi_id = p.id)");
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
+  bindings.push(options.limit ?? 100);
+
+  const result = await database.sqlite3.execWithParams(
+    database.db,
+    `
+      SELECT
+        p.id,
+        p.name,
+        p.description,
+        p.category,
+        p.latitude,
+        p.longitude,
+        p.geofence_radius_m,
+        p.region,
+        p.district,
+        p.source,
+        p.base_xp,
+        COALESCE(user_state.is_saved, 0),
+        CASE WHEN COUNT(visits.id) > 0 THEN 1 ELSE 0 END,
+        COUNT(visits.id),
+        MAX(visits.arrived_at),
+        COALESCE((
+          SELECT GROUP_CONCAT(ordered_tags.name, CHAR(31))
+          FROM (
+            SELECT tag.name
+            FROM poi_tags place_tag
+            JOIN tags tag ON tag.id = place_tag.tag_id
+            WHERE place_tag.poi_id = p.id
+            ORDER BY place_tag.rowid
+          ) AS ordered_tags
+        ), '')
+      FROM pois p
+      LEFT JOIN poi_user_state user_state ON user_state.poi_id = p.id
+      LEFT JOIN visits ON visits.poi_id = p.id
+      ${whereClause}
+      GROUP BY p.id
+      ORDER BY
+        COALESCE(user_state.is_saved, 0) DESC,
+        MAX(visits.arrived_at) DESC,
+        p.name COLLATE NOCASE
+      LIMIT ?;
+    `,
+    bindings,
+  );
+
+  return result.rows.map(
+    ([
+      id,
+      name,
+      description,
+      category,
+      latitude,
+      longitude,
+      geofenceRadius,
+      region,
+      district,
+      source,
+      baseXp,
+      isSaved,
+      isVisited,
+      visitCount,
+      lastVisitedAt,
+      tags,
+    ]): PlaceSummary => ({
+      id: asString(id),
+      name: asString(name),
+      description: asOptionalString(description),
+      category: category as POI["category"],
+      latitude: asNumber(latitude),
+      longitude: asNumber(longitude),
+      geofence_radius_m: asNumber(geofenceRadius),
+      region: asString(region),
+      district: asString(district),
+      source: asString(source),
+      base_xp: asNumber(baseXp),
+      is_saved: Boolean(asNumber(isSaved)),
+      is_visited: Boolean(asNumber(isVisited)),
+      visit_count: asNumber(visitCount),
+      last_visited_at: asOptionalString(lastVisitedAt),
+      tags:
+        typeof tags === "string" && tags.length > 0
+          ? tags.split(String.fromCharCode(31))
+          : [],
+    }),
+  );
+}
+
+export async function setPOISaved(
+  database: PasoDatabase,
+  poiId: string,
+  saved: boolean,
+) {
+  await getPoiById(database, poiId);
+  await database.sqlite3.execWithParams(
+    database.db,
+    `
+      INSERT INTO poi_user_state (
+        poi_id, is_saved, saved_at, updated_at
+      ) VALUES (?, ?, CASE WHEN ? = 1 THEN datetime('now') ELSE NULL END, datetime('now'))
+      ON CONFLICT(poi_id) DO UPDATE SET
+        is_saved = excluded.is_saved,
+        saved_at = CASE
+          WHEN excluded.is_saved = 1 THEN COALESCE(poi_user_state.saved_at, datetime('now'))
+          ELSE NULL
+        END,
+        updated_at = datetime('now');
+    `,
+    [poiId, saved ? 1 : 0, saved ? 1 : 0],
+  );
+}
+
+function normalizeTagNames(tagNames: string[]) {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const rawName of tagNames) {
+    const name = rawName.trim().replace(/\s+/g, " ");
+    if (!name) continue;
+    if (name.length > 24) {
+      throw new Error("태그는 24자 이하여야 합니다.");
+    }
+
+    const key = name.toLocaleLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      normalized.push(name);
+    }
+  }
+
+  if (normalized.length > 8) {
+    throw new Error("장소당 태그는 최대 8개까지 저장할 수 있습니다.");
+  }
+
+  return normalized;
+}
+
+export async function setPOITags(
+  database: PasoDatabase,
+  poiId: string,
+  tagNames: string[],
+) {
+  await getPoiById(database, poiId);
+  const normalizedNames = normalizeTagNames(tagNames);
+
+  await withImmediateTransaction(database, async () => {
+    await database.sqlite3.execWithParams(
+      database.db,
+      "DELETE FROM poi_tags WHERE poi_id = ?;",
+      [poiId],
+    );
+
+    for (const name of normalizedNames) {
+      let tagResult = await database.sqlite3.execWithParams(
+        database.db,
+        "SELECT id FROM tags WHERE name = ? COLLATE NOCASE;",
+        [name],
+      );
+      let tagId = asOptionalString(tagResult.rows[0]?.[0]);
+
+      if (!tagId) {
+        tagId = createPasoId("tag");
+        await database.sqlite3.execWithParams(
+          database.db,
+          "INSERT INTO tags (id, name) VALUES (?, ?);",
+          [tagId, name],
+        );
+        tagResult = await database.sqlite3.execWithParams(
+          database.db,
+          "SELECT id FROM tags WHERE id = ?;",
+          [tagId],
+        );
+        tagId = asString(tagResult.rows[0]?.[0]);
+      }
+
+      await database.sqlite3.execWithParams(
+        database.db,
+        "INSERT OR IGNORE INTO poi_tags (poi_id, tag_id) VALUES (?, ?);",
+        [poiId, tagId],
+      );
+    }
+
+    await database.sqlite3.exec(
+      database.db,
+      `
+        DELETE FROM tags
+        WHERE NOT EXISTS (
+          SELECT 1 FROM poi_tags WHERE poi_tags.tag_id = tags.id
+        );
+      `,
+    );
+  });
+
+  return normalizedNames;
+}
+
 export async function getProfile(database: PasoDatabase): Promise<Profile> {
   const result = await database.sqlite3.execWithParams(
     database.db,
@@ -374,7 +642,12 @@ export async function createVisit(
     [input.poiId],
   );
   const isFirstVisit = asNumber(firstVisitCheck.rows[0]?.[0]) === 0;
-  const { breakdown, totalXp } = calculateVisitXP(poi.base_xp, isFirstVisit);
+  const photoIds = input.photoIds ?? [];
+  const { breakdown, totalXp } = calculateVisitXP(
+    poi.base_xp,
+    isFirstVisit,
+    photoIds.length,
+  );
   const visitId = createPasoId("visit");
   const createdAt = input.arrivedAt;
 
@@ -392,11 +665,12 @@ export async function createVisit(
         gps_accuracy_m,
         memo,
         mood,
+        verification_mode,
         photo_ids,
         xp_earned,
         xp_breakdown_json,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
     [
       visitId,
@@ -409,7 +683,8 @@ export async function createVisit(
       input.gpsAccuracyM ?? null,
       input.memo ?? null,
       input.mood ?? null,
-      JSON.stringify([]),
+      input.verificationMode ?? "manual",
+      JSON.stringify(photoIds),
       totalXp,
       JSON.stringify(breakdown),
       createdAt,
@@ -434,6 +709,16 @@ export async function createVisit(
     );
   }
 
+  if (breakdown.photo_bonus > 0) {
+    await awardXp(
+      database,
+      "visit_photo",
+      visitId,
+      breakdown.photo_bonus,
+      `${poi.name} photo memory`,
+    );
+  }
+
   await syncProfileAndStats(database);
 
   return {
@@ -449,7 +734,8 @@ export async function createVisit(
     gps_accuracy_m: input.gpsAccuracyM,
     memo: input.memo,
     mood: input.mood,
-    photo_ids: [],
+    verification_mode: input.verificationMode ?? "manual",
+    photo_ids: photoIds,
     xp_earned: totalXp,
     xp_breakdown: breakdown,
     created_at: createdAt,
@@ -558,6 +844,7 @@ export async function getRecentVisits(
         visits.gps_accuracy_m,
         visits.memo,
         visits.mood,
+        visits.verification_mode,
         visits.photo_ids,
         visits.xp_earned,
         visits.xp_breakdown_json,
@@ -584,6 +871,7 @@ export async function getRecentVisits(
       gpsAccuracy,
       memo,
       mood,
+      verificationMode,
       photoIds,
       xpEarned,
       xpBreakdown,
@@ -603,12 +891,18 @@ export async function getRecentVisits(
         gpsAccuracy == null ? undefined : asNumber(gpsAccuracy),
       memo: asOptionalString(memo),
       mood: asOptionalString(mood),
+      verification_mode:
+        verificationMode === "gps" ? "gps" : "manual",
       photo_ids: asStringArray(photoIds),
       xp_earned: asNumber(xpEarned),
       xp_breakdown: asXPBreakdown(xpBreakdown),
       created_at: asString(createdAt),
     }),
   );
+}
+
+export function getAllVisits(database: PasoDatabase) {
+  return getRecentVisits(database, -1);
 }
 
 export async function getRecentReviews(
@@ -668,4 +962,8 @@ export async function getRecentReviews(
       updated_at: asOptionalString(updatedAt),
     }),
   );
+}
+
+export function getAllReviews(database: PasoDatabase) {
+  return getRecentReviews(database, -1);
 }

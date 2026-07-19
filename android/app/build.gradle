@@ -1,5 +1,44 @@
 apply plugin: 'com.android.application'
 
+def releaseSigningPropertiesPath = System.getenv('MY_PASO_UPLOAD_KEYSTORE_PROPERTIES')
+def releaseSigningPropertiesFile = releaseSigningPropertiesPath
+        ? file(releaseSigningPropertiesPath)
+        : new File(System.getProperty('user.home'), 'key/my-paso-upload.properties')
+def releaseSigningProperties = new Properties()
+def releaseSigningConfigured = releaseSigningPropertiesFile.exists()
+File releaseKeystoreFile = null
+
+if (releaseSigningConfigured) {
+    releaseSigningPropertiesFile.withInputStream { stream ->
+        releaseSigningProperties.load(stream)
+    }
+
+    def requiredSigningFields = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+    def missingSigningFields = requiredSigningFields.findAll {
+        !releaseSigningProperties.getProperty(it)?.trim()
+    }
+    if (!missingSigningFields.isEmpty()) {
+        throw new GradleException("Missing Android signing properties: ${missingSigningFields.join(', ')}")
+    }
+
+    releaseKeystoreFile = new File(releaseSigningProperties.getProperty('storeFile'))
+    if (!releaseKeystoreFile.isAbsolute()) {
+        releaseKeystoreFile = new File(
+                releaseSigningPropertiesFile.parentFile,
+                releaseSigningProperties.getProperty('storeFile')
+        )
+    }
+    if (!releaseKeystoreFile.exists()) {
+        throw new GradleException("Android upload keystore not found: ${releaseKeystoreFile}")
+    }
+}
+
+def appVersionCode = Integer.parseInt(System.getenv('MY_PASO_VERSION_CODE') ?: '2')
+def appVersionName = System.getenv('MY_PASO_VERSION_NAME') ?: '0.2.0'
+if (appVersionCode < 1) {
+    throw new GradleException('MY_PASO_VERSION_CODE must be a positive integer.')
+}
+
 android {
     namespace = "com.mypaso.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +46,8 @@ android {
         applicationId "com.mypaso.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +55,34 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile releaseKeystoreFile
+                storePassword releaseSigningProperties.getProperty('storePassword')
+                keyAlias releaseSigningProperties.getProperty('keyAlias')
+                keyPassword releaseSigningProperties.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name in ['assembleRelease', 'bundleRelease'] && !releaseSigningConfigured) {
+        task.doFirst {
+            throw new GradleException(
+                    "Release signing is not configured. Create ${releaseSigningPropertiesFile} " +
+                    'or set MY_PASO_UPLOAD_KEYSTORE_PROPERTIES.'
+            )
         }
     }
 }

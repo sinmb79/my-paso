@@ -1,0 +1,9 @@
+Hello! My Paso! 0.2.0 closed-test update.
+
+- Save places, tags, and search or filter results
+- Record GPS-verified or manual visits with photos and notes
+- Review timelines, monthly recaps, achievements, and level progress
+- Export and restore a checksum-validated full backup
+- Improved phone and tablet layouts
+
+Location and camera are used only when you choose those features. No accounts, ads, tracking, or remote analytics.

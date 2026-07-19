@@ -3,39 +3,23 @@ import { render, screen } from "@testing-library/react";
 import HomePage from "@/app/page";
 
 describe("HomePage", () => {
-  it("renders the local-first map shell heading", () => {
+  it("renders the bottom navigation with four tabs", async () => {
     render(<HomePage />);
 
-    expect(
-      screen.getByRole("heading", { name: /hello! my paso!/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/dummy poi seed ready for map shell testing/i),
-    ).toBeInTheDocument();
-  });
-
-  it("shows a safe fallback when mapbox is not configured", async () => {
-    render(<HomePage />);
-
-    expect(await screen.findByText(/map preview unavailable/i)).toBeInTheDocument();
-    expect(await screen.findByText(/100 bundled dummy pois/i)).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: /focused poi/i })).toBeInTheDocument();
-  });
-
-  it("surfaces the local journal workflow once the bundled pois are ready", async () => {
-    render(<HomePage />);
+    const nav = await screen.findByRole("navigation");
+    expect(nav).toBeInTheDocument();
 
     expect(
-      await screen.findByRole("heading", { name: /local journal/i }),
+      screen.getByRole("button", { name: /지도/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: /import local json/i }),
+      screen.getByRole("button", { name: /저널/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: /record local visit/i }),
+      screen.getByRole("button", { name: /탐색/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: /profile snapshot/i }),
+      screen.getByRole("button", { name: /프로필/i }),
     ).toBeInTheDocument();
   });
 });

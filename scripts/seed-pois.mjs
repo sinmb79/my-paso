@@ -13,31 +13,39 @@ const CATEGORIES = [
   "food",
   "community",
 ];
+const CATEGORY_LABELS = {
+  cultural_heritage: "문화유산",
+  historic_site: "역사유적",
+  tourist_attraction: "관광명소",
+  nature: "자연명소",
+  food: "미식장소",
+  community: "커뮤니티",
+};
 const REGIONS = [
-  "Seoul",
-  "Gyeonggi",
-  "Incheon",
-  "Busan",
-  "Gangwon",
-  "Jeju",
+  "서울",
+  "경기",
+  "인천",
+  "부산",
+  "강원",
+  "제주",
 ];
 const DISTRICTS = [
-  "Jongno",
-  "Jung",
-  "Yongsan",
-  "Seongdong",
-  "Mapo",
-  "Seodaemun",
-  "Songpa",
-  "Gangnam",
-  "Yeongdeungpo",
-  "Suwon",
-  "Yongin",
-  "Goyang",
-  "Incheon Jung",
-  "Haeundae",
-  "Chuncheon",
-  "Jeju City",
+  "종로",
+  "중구",
+  "용산",
+  "성동",
+  "마포",
+  "서대문",
+  "송파",
+  "강남",
+  "영등포",
+  "수원",
+  "용인",
+  "고양",
+  "인천 중구",
+  "해운대",
+  "춘천",
+  "제주시",
 ];
 
 function parseArgs(argv) {
@@ -115,12 +123,13 @@ function createDummyPois(count = DEFAULT_COUNT) {
     const sequence = index + 1;
     const row = Math.floor(index / 10);
     const col = index % 10;
+    const category = CATEGORIES[index % CATEGORIES.length];
 
     return {
       id: `dummy-poi-${sequence}`,
-      name: `Dummy POI ${sequence}`,
-      description: `Bundled placeholder point of interest #${sequence} for local-first map shell testing.`,
-      category: CATEGORIES[index % CATEGORIES.length],
+      name: `테스트 ${CATEGORY_LABELS[category]} ${String(sequence).padStart(2, "0")}`,
+      description: `로컬 퍼스트 지도와 방문 기록 기능을 검증하기 위한 테스트 장소 ${String(sequence).padStart(2, "0")}입니다.`,
+      category,
       latitude: Number((37.45 + row * 0.025 + (col % 2) * 0.0025).toFixed(6)),
       longitude: Number((126.82 + col * 0.03 + row * 0.004).toFixed(6)),
       geofence_radius_m: 50,

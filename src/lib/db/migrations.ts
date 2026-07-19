@@ -1,8 +1,6 @@
 import type { SQLiteAPI } from "@/lib/db/sqlite-types";
 
 const CORE_SCHEMA = `
-  PRAGMA foreign_keys = ON;
-
   CREATE TABLE IF NOT EXISTS profile (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     nickname TEXT DEFAULT 'Paso Walker',
@@ -93,6 +91,85 @@ const CORE_SCHEMA = `
   INSERT OR IGNORE INTO stats (id, updated_at) VALUES (1, datetime('now'));
 `;
 
+const USER_PLACE_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS poi_user_state (
+    poi_id TEXT PRIMARY KEY REFERENCES pois(id) ON DELETE CASCADE,
+    is_saved INTEGER NOT NULL DEFAULT 0 CHECK (is_saved IN (0, 1)),
+    saved_at TEXT,
+    personal_note TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_poi_user_state_saved
+    ON poi_user_state(is_saved, saved_at DESC);
+
+  CREATE TABLE IF NOT EXISTS tags (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS poi_tags (
+    poi_id TEXT NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+    tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (poi_id, tag_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_poi_tags_tag ON poi_tags(tag_id, poi_id);
+`;
+
+const VISIT_VERIFICATION_SCHEMA = `
+  ALTER TABLE visits
+    ADD COLUMN verification_mode TEXT NOT NULL DEFAULT 'manual'
+    CHECK (verification_mode IN ('manual', 'gps'));
+`;
+
+const MIGRATIONS = [
+  { version: 1, sql: CORE_SCHEMA },
+  { version: 2, sql: USER_PLACE_SCHEMA },
+  { version: 3, sql: VISIT_VERIFICATION_SCHEMA },
+] as const;
+
 export async function runMigrations(sqlite3: SQLiteAPI, db: number) {
-  await sqlite3.exec(db, CORE_SCHEMA);
+  await sqlite3.exec(
+    db,
+    `
+      PRAGMA foreign_keys = ON;
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `,
+  );
+
+  const appliedResult = await sqlite3.execWithParams(
+    db,
+    "SELECT version FROM schema_migrations;",
+  );
+  const applied = new Set(appliedResult.rows.map(([version]) => Number(version)));
+
+  for (const migration of MIGRATIONS) {
+    if (applied.has(migration.version)) {
+      continue;
+    }
+
+    await sqlite3.exec(db, "BEGIN IMMEDIATE;");
+    try {
+      await sqlite3.exec(db, migration.sql);
+      await sqlite3.execWithParams(
+        db,
+        "INSERT INTO schema_migrations (version) VALUES (?);",
+        [migration.version],
+      );
+      await sqlite3.exec(db, "COMMIT;");
+    } catch (error) {
+      try {
+        await sqlite3.exec(db, "ROLLBACK;");
+      } catch {
+        // Keep the migration error as the actionable failure.
+      }
+      throw error;
+    }
+  }
 }

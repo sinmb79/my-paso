@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; }
+  body { width: 512px; height: 512px; }
+  .icon {
+    width: 512px; height: 512px;
+    background: linear-gradient(145deg, #1c1917 0%, #0c0a09 100%);
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .glow {
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(251,191,36,0.2) 0%, transparent 70%);
+  }
+  .pin-circle {
+    width: 120px; height: 120px;
+    border: 8px solid #fbbf24;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .pin-dot {
+    width: 36px; height: 36px;
+    background: #fbbf24;
+    border-radius: 50%;
+  }
+  .pin-tail {
+    width: 0; height: 0;
+    border-left: 24px solid transparent;
+    border-right: 24px solid transparent;
+    border-top: 40px solid #fbbf24;
+    opacity: 0.4;
+    position: relative;
+    z-index: 1;
+    margin-top: -4px;
+  }
+  .text {
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: #fbbf24;
+    letter-spacing: 8px;
+    margin-top: 32px;
+    position: relative;
+    z-index: 1;
+  }
+  .sub {
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: rgba(251,191,36,0.5);
+    letter-spacing: 6px;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+<div class="icon">
+  <div class="glow"></div>
+  <div class="pin-circle">
+    <div class="pin-dot"></div>
+  </div>
+  <div class="pin-tail"></div>
+  <div class="text">PASO</div>
+  <div class="sub">MY PASO</div>
+</div>
+</body>
+</html>

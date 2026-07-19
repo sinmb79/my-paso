@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Hello! My Paso!",
-  description: "Local-first life logging PWA for footsteps, places, and XP.",
+  description: "Local-first journal for places, visits, reviews, and XP.",
   applicationName: "Hello! My Paso!",
   manifest: withBasePath("/manifest.webmanifest"),
 };
@@ -25,12 +25,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isMobileBuild = process.env.MY_PASO_BUILD_TARGET === "mobile";
+  const serviceWorkerPath = withBasePath("/sw.js");
+
   return (
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {!isMobileBuild ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register(${JSON.stringify(serviceWorkerPath)})})}`,
+            }}
+          />
+        ) : null}
+      </body>
     </html>
   );
 }

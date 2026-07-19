@@ -2,10 +2,13 @@ import {
   createReview,
   createVisit,
   getPOIs,
+  getPlaceSummaries,
   getProfile,
   getRecentReviews,
   getRecentVisits,
   getStats,
+  setPOISaved,
+  setPOITags,
 } from "@/lib/db/queries";
 import { destroyDatabase, initializeDatabase } from "@/lib/db/sqlite";
 import { loadSeedPOIs } from "@/lib/poi/seed-loader";
@@ -84,5 +87,90 @@ describe("journal queries", () => {
     expect(review.tags).toEqual(["dummy-seed", "phase0"]);
     expect(stats.total_reviews).toBe(1);
     expect(recentReviews[0]?.text).toContain("실제 흐름 검증");
+  });
+
+  it("keeps saved state and tags separate from seed POIs and searches both", async () => {
+    const database = await initializeDatabase({
+      databaseName: "paso-journal-test",
+      persistent: false,
+    });
+
+    await loadSeedPOIs(database);
+    const [poi] = await getPOIs(database, 1);
+    await setPOISaved(database, poi.id, true);
+    await setPOITags(database, poi.id, ["아이와", "다시 갈 곳", "아이와"]);
+
+    const saved = await getPlaceSummaries(database, { state: "saved" });
+    const tagged = await getPlaceSummaries(database, { query: "다시 갈 곳" });
+
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      id: poi.id,
+      is_saved: true,
+      is_visited: false,
+      visit_count: 0,
+      tags: ["아이와", "다시 갈 곳"],
+    });
+    expect(tagged.map((place) => place.id)).toContain(poi.id);
+
+    const seedRow = await database.sqlite3.execWithParams(
+      database.db,
+      "SELECT name, source FROM pois WHERE id = ?;",
+      [poi.id],
+    );
+    expect(seedRow.rows[0]).toEqual([poi.name, poi.source]);
+  });
+
+  it("derives visited state and supports text and state filters", async () => {
+    const database = await initializeDatabase({
+      databaseName: "paso-journal-test",
+      persistent: false,
+    });
+
+    await loadSeedPOIs(database);
+    const [poi] = await getPOIs(database, 1);
+    await createVisit(database, {
+      poiId: poi.id,
+      arrivedAt: "2026-07-19T08:00:00.000Z",
+      latitude: poi.latitude,
+      longitude: poi.longitude,
+    });
+
+    const visited = await getPlaceSummaries(database, { state: "visited" });
+    const searched = await getPlaceSummaries(database, {
+      query: poi.name.slice(0, 3),
+    });
+
+    expect(visited).toHaveLength(1);
+    expect(visited[0]).toMatchObject({
+      id: poi.id,
+      is_visited: true,
+      visit_count: 1,
+      last_visited_at: "2026-07-19T08:00:00.000Z",
+    });
+    expect(searched.map((place) => place.id)).toContain(poi.id);
+  });
+
+  it("stores visit photo ids, counts unique photos, and awards one photo bonus", async () => {
+    const database = await initializeDatabase({
+      databaseName: "paso-journal-test",
+      persistent: false,
+    });
+
+    await loadSeedPOIs(database);
+    const [poi] = await getPOIs(database, 1);
+    const visit = await createVisit(database, {
+      poiId: poi.id,
+      arrivedAt: "2026-07-19T09:00:00.000Z",
+      latitude: poi.latitude,
+      longitude: poi.longitude,
+      photoIds: ["photo-one.jpg", "photo-two.jpg"],
+    });
+    const stats = await getStats(database);
+
+    expect(visit.photo_ids).toEqual(["photo-one.jpg", "photo-two.jpg"]);
+    expect(visit.verification_mode).toBe("manual");
+    expect(visit.xp_breakdown.photo_bonus).toBe(5);
+    expect(stats.total_photos).toBe(2);
   });
 });
