@@ -3,14 +3,14 @@
 기준일: 2026-07-19
 앱: Hello! My Paso!
 패키지: `com.mypaso.app`
-후보: 0.2.0 (`versionCode 4`)
+버전: 0.2.0 (`versionCode 4`)
 Play 출시명: `0.2.0-alpha3`
 
 ## 결론
 
 기능 검증용 더미 POI 100건을 Wikidata CC0 기반 대한민국 실제 장소 100건으로 교체했습니다. 신규 설치와 기존 알파 데이터베이스 마이그레이션을 자동 검증했고, API 35 휴대전화와 API 36 태블릿에서 기존 versionCode 2 위에 versionCode 4 서명 APK를 업데이트 설치했습니다. 두 환경 모두 실제 장소 100건을 표시하고 더미 장소를 표시하지 않았습니다.
 
-서명 AAB·APK, 웹·모바일 빌드, Android·iOS Capacitor 동기화, 휴대전화·태블릿 화면과 로컬 기록 영속성을 통과했습니다. 현재 Play Alpha의 versionCode 3 `0.2.0-alpha2`는 게시 완료 상태이며, 이 versionCode 4 후보는 같은 Alpha 트랙 업로드 직전 상태입니다.
+서명 AAB·APK, 웹·모바일 빌드, Android·iOS Capacitor 동기화, 휴대전화·태블릿 화면과 로컬 기록 영속성을 통과했습니다. Play Alpha의 versionCode 3 `0.2.0-alpha2`는 게시 완료 상태입니다. versionCode 4 `0.2.0-alpha3`는 2026-07-19 같은 Alpha 트랙에 100% 출시로 업로드·제출했으며 현재 Google 검토 중입니다.
 
 ## 서명 산출물
 
@@ -122,6 +122,12 @@ Bundle manifest:
 ## Play Console 현재 상태
 
 - `0.2.0-alpha2` versionCode 3: Alpha 게시·활성
+- `0.2.0-alpha3` versionCode 4: Alpha 100% 출시, Google 검토 중
+- 새 App Bundle: `4 (0.2.0)`, API 24 이상, target SDK 36
+- 출시 노트: 기본 `ko-KR`, `en-US`까지 2개 언어 제공
+- 자동 사전 검사: 제출 가능 상태 통과
+- 지원 기기 변화: 전화·태블릿·TV·자동차·Chromebook·Android XR에서 제외 0대
+- 비차단 경고: 난독화를 사용하지 않는 빌드의 가독화 파일 부재 1건
 - 대상 국가: 대한민국 1개
 - 테스터 이메일 목록: `젤리테스터`, 44명
 - Play 대시보드: `12명 이상의 테스터가 옵트인함` 완료

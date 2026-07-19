@@ -4,8 +4,8 @@
 앱 ID: com.mypaso.app
 현재 게시 버전: 0.2.0 (versionCode 3)
 현재 출시명: 0.2.0-alpha2
-다음 업데이트 후보: 0.2.0 (versionCode 4)
-다음 출시명: 0.2.0-alpha3
+검토 중 업데이트: 0.2.0 (versionCode 4)
+검토 중 출시명: 0.2.0-alpha3
 
 ## 공식 요건 확인
 
@@ -97,15 +97,15 @@ store-assets/store-listing.txt의 국문을 기본 등록정보에 입력하고 
 
 ## 4. 비공개 테스트 버전 업데이트
 
-0.2.0-alpha2 versionCode 3은 게시 완료됐습니다. 실제 POI 교체판은 같은 Alpha 트랙에 올려 테스터의 옵트인을 유지합니다.
+0.2.0-alpha2 versionCode 3은 게시 완료됐습니다. 실제 POI 교체판인 0.2.0-alpha3 versionCode 4는 2026-07-19 같은 Alpha 트랙에 100% 출시로 제출했으며 현재 Google 검토 중입니다. 기존 테스터 트랙을 유지하므로 옵트인 운영은 계속됩니다.
 
-1. Play Console의 테스트 및 출시에서 비공개 테스트 Alpha 트랙을 엽니다.
-2. 대한민국을 대상 국가로 확인합니다.
-3. 새 버전에 versionCode 4 app-release.aab를 업로드합니다.
-4. 출시명을 0.2.0-alpha3로 입력합니다.
-5. closed-test/release-notes-ko.txt와 release-notes-en.txt의 내용을 각 언어 태그에 입력합니다.
-6. 권한·데이터 보안 경고가 실제 앱 동작과 일치하는지 확인합니다.
-7. 저장 후 검토를 시작하고 비공개 테스트 출시를 게시합니다.
+1. 완료: Play Console의 비공개 테스트 Alpha 트랙과 대한민국 대상 국가 1개를 확인했습니다.
+2. 완료: versionCode 4 `app-release.aab`를 업로드했습니다.
+3. 완료: 출시명을 `0.2.0-alpha3`로 지정했습니다.
+4. 완료: `closed-test/release-notes-ko.txt`와 `release-notes-en.txt`를 입력하고 2개 언어 제공을 확인했습니다.
+5. 완료: 자동 검사를 통과하고 권한·데이터 보안과 기기 지원 변화를 검토했습니다.
+6. 완료: 100% 출시 변경사항 1건을 Google 검토에 전송했습니다.
+7. 남음: 검토 승인 후 Alpha 자동 게시와 테스터 배포 상태를 확인합니다.
 
 Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역할입니다. 로컬 업로드 키와 속성 파일은 암호화된 별도 저장소에도 백업합니다.
 

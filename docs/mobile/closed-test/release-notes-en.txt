@@ -1,11 +1,8 @@
 Hello! My Paso! 0.2.0-alpha3 closed-test update.
 
-- Replaced 100 generated test points with 100 bundled South Korean places from Wikidata CC0 data
-- Preserved legacy alpha visit history while showing only real places in discovery
-- Save places, tags, and search or filter results
-- Record GPS-verified or manual visits with photos and notes
-- Review timelines, monthly recaps, achievements, and level progress
-- Export and restore a checksum-validated full backup
-- Improved phone and tablet layouts
+- Replaced 100 generated test points with 100 bundled South Korean places from Wikidata CC0
+- Preserved legacy visit history while showing only real places in discovery
+- Improved saved places, tags, search, visits, photos, notes, ratings, recaps, achievements, and phone/tablet layouts
+- Added checksum-validated full backup and restore
 
-Location and camera are used only when you choose those features. No accounts, ads, tracking, or remote analytics.
+Location and camera are used only when you choose those features. No accounts, ads, tracking, or analytics.

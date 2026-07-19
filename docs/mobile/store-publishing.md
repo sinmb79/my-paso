@@ -9,8 +9,8 @@
 | 패키지 ID | 준비 | com.mypaso.app |
 | 현재 게시 버전 | 게시 완료 | 0.2.0 / versionCode 3 |
 | 현재 출시명 | Alpha 활성 | 0.2.0-alpha2 |
-| 다음 업데이트 | 로컬 검증 완료·업로드 대기 | 0.2.0 / versionCode 4 |
-| 다음 출시명 | 준비 | 0.2.0-alpha3 |
+| 검토 중 업데이트 | Google 검토 중 | 0.2.0 / versionCode 4 |
+| 검토 중 출시명 | Alpha 제출 완료 | 0.2.0-alpha3 |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
 | App Bundle | v4 서명·검증 완료 | android/app/build/outputs/bundle/release/app-release.aab |
 | 릴리스 APK | v4 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
@@ -23,6 +23,7 @@
 | 이미지 | 실제 앱 화면으로 준비 | store-assets 폴더 |
 | 테스트 운영 자료 | 준비 | closed-test 폴더 |
 | Play Console alpha2 | 게시 완료 | 0.2.0-alpha2 100%, Alpha 활성 |
+| Play Console alpha3 | 검토 중 | 0.2.0-alpha3 100%, versionCode 4 |
 | 테스터 조건 | 일부 완료 | 12명 이상 옵트인 완료, 14일 연속 참여 진행 중 |
 
 ## 최종 로컬 검증
@@ -69,9 +70,10 @@ Google의 데이터 보안 안내는 기기 안에서만 처리되고 외부 전
 4. 완료: 0.2.0-alpha2 100% 출시안과 등록정보 변경 3건을 Google 검토에 제출했습니다.
 5. 완료: Google 승인 후 0.2.0-alpha2 Alpha 트랙 자동 게시와 활성 상태를 확인했습니다.
 6. 완료: Play 대시보드에서 12명 이상 옵트인 조건을 확인했습니다. `젤리테스터` 이메일 목록은 44명입니다.
-7. 남음: versionCode 4 실제 POI 업데이트를 같은 Alpha 트랙에 업로드·제출합니다.
-8. 남음: 최소 12명의 14일 연속 옵트인을 유지하고 실제 미션·피드백·수정 증거를 기록합니다.
-9. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
+7. 완료: versionCode 4 실제 POI 업데이트를 `0.2.0-alpha3` 100% 출시로 같은 Alpha 트랙에 업로드하고 Google 검토에 제출했습니다.
+8. 남음: Google 검토 승인과 Alpha 트랙 자동 게시를 확인합니다.
+9. 남음: 최소 12명의 14일 연속 옵트인을 유지하고 실제 미션·피드백·수정 증거를 기록합니다.
+10. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
 
 ## 공개 출시 전 필수 게이트
 

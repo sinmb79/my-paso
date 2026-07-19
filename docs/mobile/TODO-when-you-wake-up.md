@@ -2,7 +2,7 @@
 
 기준일: 2026-07-19
 현재 게시 버전: 0.2.0-alpha2 (versionCode 3)
-다음 업데이트 후보: 0.2.0-alpha3 (versionCode 4)
+검토 중 업데이트: 0.2.0-alpha3 (versionCode 4)
 
 ## 로컬 완료
 
@@ -19,9 +19,10 @@
 - [x] 국문·영문 정책, 등록정보, 출시 노트와 테스터 미션
 - [x] GPT 이미지 통합과 실제 앱 휴대전화·태블릿 스크린샷
 
-## Play Console에서 남음
+## Play Console과 테스트 운영에서 남음
 
-- [ ] 0.2.0-alpha3 (versionCode 4) 실제 POI AAB를 같은 Alpha 트랙에 업로드·제출
+- [x] 0.2.0-alpha3 (versionCode 4) 실제 POI AAB를 같은 Alpha 트랙에 업로드·제출
+- [ ] 0.2.0-alpha3 Google 검토 승인과 Alpha 트랙 자동 게시 확인
 - [x] 0.2.0 (versionCode 3) AAB 업로드
 - [x] 권한·데이터 보안·앱 액세스·콘텐츠 등급 확인
 - [x] 국문 기본 등록정보와 별도 영문 등록정보 입력
