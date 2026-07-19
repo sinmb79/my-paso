@@ -38,6 +38,9 @@ describe("native privacy and permission configuration", () => {
     expect(manifest).toContain("android.permission.ACCESS_FINE_LOCATION");
     expect(manifest).toContain("android.permission.CAMERA");
     expect(manifest).toContain('android.hardware.camera" android:required="false"');
+    expect(manifest).toContain('android.hardware.location" android:required="false"');
+    expect(manifest).toContain('android.hardware.location.gps" android:required="false"');
+    expect(manifest).toContain('android.hardware.location.network" android:required="false"');
     expect(manifest).not.toContain("ACCESS_BACKGROUND_LOCATION");
   });
 

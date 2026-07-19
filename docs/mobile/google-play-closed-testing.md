@@ -37,8 +37,8 @@ PowerShell에서 다시 만들 때:
 |---|---|
 | versionName | 0.2.0 |
 | versionCode | 2 |
-| AAB 크기 | 7,017,388 bytes |
-| AAB SHA-256 | 0777BAABF9D27EA06C4D8D96E512EA729F23D7B656B1BAE1E59EF83C63D13585 |
+| AAB 크기 | 7,017,465 bytes |
+| AAB SHA-256 | 263E480177C66FC68105536FA9A02542F410C574BC9F7CBF50A6418FE2EF6CBF |
 | 패키지 | com.mypaso.app |
 | 최소·대상 SDK | API 24 / API 36 |
 | Bundletool validate | 통과 |

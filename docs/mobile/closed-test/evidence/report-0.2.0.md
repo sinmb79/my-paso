@@ -14,8 +14,8 @@ Android 비공개 테스트에 올릴 서명 AAB와 APK를 생성했고, 자동 
 | 항목 | AAB | APK |
 |---|---|---|
 | 위치 | android/app/build/outputs/bundle/release/app-release.aab | android/app/build/outputs/apk/release/app-release.apk |
-| 크기 | 7,017,388 bytes | 7,745,957 bytes |
-| SHA-256 | 0777BAABF9D27EA06C4D8D96E512EA729F23D7B656B1BAE1E59EF83C63D13585 | F9FC773866FAC286770C1967023F5D351182DA41B6B1B46AEE44C7E0A30C5754 |
+| 크기 | 7,017,465 bytes | 7,745,957 bytes |
+| SHA-256 | 263E480177C66FC68105536FA9A02542F410C574BC9F7CBF50A6418FE2EF6CBF | F9FC773866FAC286770C1967023F5D351182DA41B6B1B46AEE44C7E0A30C5754 |
 | 검증 | Bundletool validate 통과 | apksigner v2 통과 |
 | 인증서 | 업로드 키와 일치 | 업로드 키와 일치 |
 
