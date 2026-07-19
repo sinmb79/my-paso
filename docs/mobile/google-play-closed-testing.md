@@ -2,7 +2,7 @@
 
 기준일: 2026-07-19
 앱 ID: com.mypaso.app
-배포 후보: 0.2.0 (versionCode 2)
+배포 후보: 0.2.0 (versionCode 3)
 출시명: 0.2.0-alpha2
 
 ## 공식 요건 확인
@@ -36,9 +36,9 @@ PowerShell에서 다시 만들 때:
 | 항목 | 값 |
 |---|---|
 | versionName | 0.2.0 |
-| versionCode | 2 |
-| AAB 크기 | 7,017,465 bytes |
-| AAB SHA-256 | 263E480177C66FC68105536FA9A02542F410C574BC9F7CBF50A6418FE2EF6CBF |
+| versionCode | 3 |
+| AAB 크기 | 7,017,483 bytes |
+| AAB SHA-256 | 14B16AA0514083B9698D8F3E3163EC34D0F17178D08C99DD82188B7C01631BA6 |
 | 패키지 | com.mypaso.app |
 | 최소·대상 SDK | API 24 / API 36 |
 | Bundletool validate | 통과 |
@@ -49,7 +49,7 @@ PowerShell에서 다시 만들 때:
     C:\Users\sinmb\key\my-paso-upload.keystore
     C:\Users\sinmb\key\my-paso-upload.properties
 
-다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없으므로 3 이상으로 증가시킵니다.
+다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없으므로 4 이상으로 증가시킵니다.
 
 ## 2. 앱 콘텐츠와 데이터 보안
 

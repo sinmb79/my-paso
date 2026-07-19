@@ -21,10 +21,17 @@ describe("native privacy and permission configuration", () => {
       join(root, "scripts/build-android-release.ps1"),
       "utf8",
     );
+    const androidGradle = readFileSync(
+      join(root, "android/app/build.gradle"),
+      "utf8",
+    );
 
-    expect(releaseScript).toContain("[int]$VersionCode = 2");
+    expect(releaseScript).toContain("[int]$VersionCode = 3");
     expect(releaseScript).toContain(
       `[string]$VersionName = '${packageJson.version}'`,
+    );
+    expect(androidGradle).toContain(
+      "System.getenv('MY_PASO_VERSION_CODE') ?: '3'",
     );
   });
 

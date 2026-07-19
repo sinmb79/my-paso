@@ -3,7 +3,7 @@
 기준일: 2026-07-19
 앱: Hello! My Paso!
 패키지: com.mypaso.app
-후보: 0.2.0 (versionCode 2)
+후보: 0.2.0 (versionCode 3)
 
 ## 결론
 
@@ -14,8 +14,8 @@ Android 비공개 테스트에 올릴 서명 AAB와 APK를 생성했고, 자동 
 | 항목 | AAB | APK |
 |---|---|---|
 | 위치 | android/app/build/outputs/bundle/release/app-release.aab | android/app/build/outputs/apk/release/app-release.apk |
-| 크기 | 7,017,465 bytes | 7,745,957 bytes |
-| SHA-256 | 263E480177C66FC68105536FA9A02542F410C574BC9F7CBF50A6418FE2EF6CBF | F9FC773866FAC286770C1967023F5D351182DA41B6B1B46AEE44C7E0A30C5754 |
+| 크기 | 7,017,483 bytes | 7,746,037 bytes |
+| SHA-256 | 14B16AA0514083B9698D8F3E3163EC34D0F17178D08C99DD82188B7C01631BA6 | 407BDE625D54FAE2DBFCC80A524F786619CE25D0818D2325082D3E71F73BB996 |
 | 검증 | Bundletool validate 통과 | apksigner v2 통과 |
 | 인증서 | 업로드 키와 일치 | 업로드 키와 일치 |
 
@@ -26,7 +26,7 @@ Android 비공개 테스트에 올릴 서명 AAB와 APK를 생성했고, 자동 
 Bundle manifest:
 
 - package: com.mypaso.app
-- version: 0.2.0 (2)
+- version: 0.2.0 (3)
 - minSdk: 24
 - targetSdk: 36
 - allowBackup: false
@@ -51,6 +51,8 @@ Bundle manifest:
 | git diff --check | 통과 |
 
 생성된 Android·iOS Capacitor 설정에서 loggingBehavior는 none입니다.
+
+기능·데이터 흐름의 휴대전화·태블릿 검증은 동일한 0.2.0 코드의 versionCode 2 APK로 수행했습니다. Play가 삭제된 versionCode 2도 재사용하지 않아, 최종 업로드 산출물은 위치 하드웨어를 선택 기능으로 명시하고 versionCode만 3으로 올려 다시 빌드했습니다. versionCode 3 AAB·APK는 빌드, Bundletool, 서명, 매니페스트 검증을 통과했습니다.
 
 ## 휴대전화 검증
 

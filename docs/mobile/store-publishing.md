@@ -7,11 +7,11 @@
 | 항목 | 상태 | 위치 또는 기준 |
 |---|---|---|
 | 패키지 ID | 준비 | com.mypaso.app |
-| 버전 | 준비 | 0.2.0 / versionCode 2 |
+| 버전 | 준비 | 0.2.0 / versionCode 3 |
 | 출시명 | 준비 | 0.2.0-alpha2 |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
 | App Bundle | 서명·검증 완료 | android/app/build/outputs/bundle/release/app-release.aab |
-| 릴리스 APK | 서명·설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
+| 릴리스 APK | v3 서명 검증·동일 코드 v2 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
 | 업로드 키 | 저장소 밖으로 분리 | C:\Users\sinmb\key |
 | 런타임 권한 | 최소화 | 포그라운드 위치, 카메라 |
 | 백그라운드 위치 | 미요청 | AndroidManifest 확인 |
@@ -23,10 +23,10 @@
 
 ## 최종 로컬 검증
 
-- AAB SHA-256: 263E480177C66FC68105536FA9A02542F410C574BC9F7CBF50A6418FE2EF6CBF
-- AAB 크기: 7,017,465 bytes
+- AAB SHA-256: 14B16AA0514083B9698D8F3E3163EC34D0F17178D08C99DD82188B7C01631BA6
+- AAB 크기: 7,017,483 bytes
 - Bundletool 구조 검증, 업로드 인증서 일치: 통과
-- 릴리스 APK SHA-256: F9FC773866FAC286770C1967023F5D351182DA41B6B1B46AEE44C7E0A30C5754
+- 릴리스 APK SHA-256: 407BDE625D54FAE2DBFCC80A524F786619CE25D0818D2325082D3E71F73BB996
 - APK v2 서명 및 업로드 인증서 일치: 통과
 - 휴대전화 API 35와 태블릿 API 36에서 서명 APK 설치·콜드 스타트: 통과
 - 지도, 탐색, 저장 장소, 태그, 상세 화면, 방문, 사진, 저널, 프로필: 통과

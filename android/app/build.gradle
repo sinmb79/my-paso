@@ -33,7 +33,7 @@ if (releaseSigningConfigured) {
     }
 }
 
-def appVersionCode = Integer.parseInt(System.getenv('MY_PASO_VERSION_CODE') ?: '2')
+def appVersionCode = Integer.parseInt(System.getenv('MY_PASO_VERSION_CODE') ?: '3')
 def appVersionName = System.getenv('MY_PASO_VERSION_NAME') ?: '0.2.0'
 if (appVersionCode < 1) {
     throw new GradleException('MY_PASO_VERSION_CODE must be a positive integer.')
