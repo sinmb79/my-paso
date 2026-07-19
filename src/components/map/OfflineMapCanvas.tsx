@@ -140,7 +140,7 @@ export function OfflineMapCanvas({
             {pois.length}
           </p>
           <p className="text-[10px] font-semibold tracking-wide" style={{ color: "var(--text-tertiary)" }}>
-            테스트 장소
+            등록 장소
           </p>
         </div>
       </div>

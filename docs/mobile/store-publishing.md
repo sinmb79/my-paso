@@ -2,16 +2,18 @@
 
 기준일: 2026-07-19
 
-## Android 비공개 테스트 후보
+## Android 비공개 테스트 현황
 
 | 항목 | 상태 | 위치 또는 기준 |
 |---|---|---|
 | 패키지 ID | 준비 | com.mypaso.app |
-| 버전 | 준비 | 0.2.0 / versionCode 3 |
-| 출시명 | 준비 | 0.2.0-alpha2 |
+| 현재 게시 버전 | 게시 완료 | 0.2.0 / versionCode 3 |
+| 현재 출시명 | Alpha 활성 | 0.2.0-alpha2 |
+| 다음 업데이트 | 로컬 검증 완료·업로드 대기 | 0.2.0 / versionCode 4 |
+| 다음 출시명 | 준비 | 0.2.0-alpha3 |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
-| App Bundle | 서명·검증 완료 | android/app/build/outputs/bundle/release/app-release.aab |
-| 릴리스 APK | v3 서명 검증·동일 코드 v2 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
+| App Bundle | v4 서명·검증 완료 | android/app/build/outputs/bundle/release/app-release.aab |
+| 릴리스 APK | v4 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
 | 업로드 키 | 저장소 밖으로 분리 | C:\Users\sinmb\key |
 | 런타임 권한 | 최소화 | 포그라운드 위치, 카메라 |
 | 백그라운드 위치 | 미요청 | AndroidManifest 확인 |
@@ -20,25 +22,28 @@
 | 스토어 등록정보 | 국문·영문 준비 | store-assets/store-listing.txt |
 | 이미지 | 실제 앱 화면으로 준비 | store-assets 폴더 |
 | 테스트 운영 자료 | 준비 | closed-test 폴더 |
-| Play Console 제출 | Google 검토 중 | 0.2.0-alpha2 100% Alpha 출시안과 등록정보 변경 3건 |
+| Play Console alpha2 | 게시 완료 | 0.2.0-alpha2 100%, Alpha 활성 |
+| 테스터 조건 | 일부 완료 | 12명 이상 옵트인 완료, 14일 연속 참여 진행 중 |
 
 ## 최종 로컬 검증
 
-- AAB SHA-256: 14B16AA0514083B9698D8F3E3163EC34D0F17178D08C99DD82188B7C01631BA6
-- AAB 크기: 7,017,483 bytes
+- AAB SHA-256: FEE02729F0029B3778351662A653C8B428F70F68897AA771E136580CAA7E8A71
+- AAB 크기: 7,019,128 bytes
 - Bundletool 구조 검증, 업로드 인증서 일치: 통과
-- 릴리스 APK SHA-256: 407BDE625D54FAE2DBFCC80A524F786619CE25D0818D2325082D3E71F73BB996
+- 릴리스 APK SHA-256: 8B329E9AEE745890831299CD2DB323AC701CA99F2FAF0F8A76B757199AC91290
 - APK v2 서명 및 업로드 인증서 일치: 통과
-- 휴대전화 API 35와 태블릿 API 36에서 서명 APK 설치·콜드 스타트: 통과
+- 휴대전화 API 35와 태블릿 API 36에서 기존 versionCode 2 위 versionCode 4 업데이트 설치·콜드 스타트: 통과
 - 지도, 탐색, 저장 장소, 태그, 상세 화면, 방문, 사진, 저널, 프로필: 통과
 - 앱 강제 종료·업데이트 설치 후 로컬 기록 유지: 통과
 - 앱 데이터 초기화 후 JSON 전체 복원: 통과
-- 테스트 파일 23개, 테스트 60개, ESLint, 웹·모바일 빌드, Capacitor 동기화: 통과
+- 테스트 파일 24개, 테스트 63개, ESLint, 웹·모바일 빌드, Android·iOS Capacitor 동기화: 통과
 - npm audit: 취약점 0건
+- AAB 번들 데이터: Wikidata QID 100개, 더미 ID·테스트 장소명 0개
+- 실제 POI 스크린샷: 휴대전화 1080 x 2400 네 장, 태블릿 2560 x 1600 한 장 재촬영 완료
 - Play 지원 기기 변화: 전화·태블릿을 포함한 모든 폼 팩터에서 제외 0대
 - Play 검증 경고: 난독화를 사용하지 않는 빌드의 가독화 파일 부재 1건(비차단)
 
-세부 명령, 기기 프로필, 해시와 화면 증거는 closed-test/evidence/report-0.2.0.md에 기록했습니다.
+현재 v4의 세부 명령, 기기 프로필, 해시와 화면 증거는 closed-test/evidence/report-0.2.0-alpha3.md에 기록했습니다. report-0.2.0.md는 현재 게시된 alpha2의 역사 기록입니다.
 
 ## Play Console 데이터 보안 기준
 
@@ -62,17 +67,20 @@ Google의 데이터 보안 안내는 기기 안에서만 처리되고 외부 전
 2. 완료: 권한, 데이터 보안, 앱 액세스, 콘텐츠 등급과 타겟층 답변을 확인했습니다.
 3. 완료: 국문·영문 등록정보와 아이콘, 그래픽, 휴대전화·태블릿 스크린샷을 등록했습니다.
 4. 완료: 0.2.0-alpha2 100% 출시안과 등록정보 변경 3건을 Google 검토에 제출했습니다.
-5. 남음: Google 승인 후 Alpha 트랙 자동 게시를 확인합니다.
-6. 남음: 최소 12명이 14일 연속 옵트인하도록 운영합니다.
-7. 남음: 실제 미션, 피드백, 결함과 수정 결과를 기록한 뒤 프로덕션 액세스를 신청합니다.
+5. 완료: Google 승인 후 0.2.0-alpha2 Alpha 트랙 자동 게시와 활성 상태를 확인했습니다.
+6. 완료: Play 대시보드에서 12명 이상 옵트인 조건을 확인했습니다. `젤리테스터` 이메일 목록은 44명입니다.
+7. 남음: versionCode 4 실제 POI 업데이트를 같은 Alpha 트랙에 업로드·제출합니다.
+8. 남음: 최소 12명의 14일 연속 옵트인을 유지하고 실제 미션·피드백·수정 증거를 기록합니다.
+9. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
 
 ## 공개 출시 전 필수 게이트
 
-1. 기능 검증용 더미 POI 100건을 출처·좌표·라이선스가 확인된 실제 데이터로 교체합니다.
-2. 새 시드로 스크린샷과 스토어 설명을 다시 검수합니다.
-3. 비공개 테스트의 P0·P1 결함을 모두 닫고 회귀 검증을 남깁니다.
-4. Play Console이 표시하는 테스터 수와 연속 기간을 충족합니다.
-5. 최신 Android System WebView 또는 Chrome이 설치된 대표 실기기에서 한 번 더 확인합니다.
+1. 완료: 더미 POI 100건을 Wikidata CC0 기반 대한민국 실제 장소 100건으로 교체하고 출처 매니페스트·해시를 고정했습니다.
+2. 완료: 새 시드로 국영문 설명과 휴대전화·태블릿 스크린샷을 다시 검수했습니다.
+3. 남음: 운영·폐업과 출입구 수준 좌표가 중요한 POI를 사람 검수합니다.
+4. 남음: 비공개 테스트의 P0·P1 결함을 모두 닫고 회귀 증거를 남깁니다.
+5. 남음: Play Console이 표시하는 14일 연속 기간을 충족합니다.
+6. 남음: 최신 Android System WebView 또는 Chrome이 설치된 대표 물리 실기기에서 한 번 더 확인합니다.
 
 ## 호환성과 iOS
 

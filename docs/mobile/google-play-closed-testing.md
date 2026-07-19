@@ -2,8 +2,10 @@
 
 기준일: 2026-07-19
 앱 ID: com.mypaso.app
-배포 후보: 0.2.0 (versionCode 3)
-출시명: 0.2.0-alpha2
+현재 게시 버전: 0.2.0 (versionCode 3)
+현재 출시명: 0.2.0-alpha2
+다음 업데이트 후보: 0.2.0 (versionCode 4)
+다음 출시명: 0.2.0-alpha3
 
 ## 공식 요건 확인
 
@@ -31,7 +33,7 @@ PowerShell에서 다시 만들 때:
 
     android/app/build/outputs/bundle/release/app-release.aab
 
-현재 검증값:
+현재 게시된 alpha2 검증값:
 
 | 항목 | 값 |
 |---|---|
@@ -50,6 +52,17 @@ PowerShell에서 다시 만들 때:
     C:\Users\sinmb\key\my-paso-upload.properties
 
 다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없으므로 4 이상으로 증가시킵니다.
+
+실제 POI 교체를 포함한 다음 후보는 versionCode 4로 빌드·서명했습니다.
+
+| 항목 | versionCode 4 후보 |
+|---|---|
+| AAB 크기 | 7,019,128 bytes |
+| AAB SHA-256 | FEE02729F0029B3778351662A653C8B428F70F68897AA771E136580CAA7E8A71 |
+| APK 크기 | 7,747,701 bytes |
+| APK SHA-256 | 8B329E9AEE745890831299CD2DB323AC701CA99F2FAF0F8A76B757199AC91290 |
+| Bundletool validate | 통과 |
+| AAB 내부 데이터 | Wikidata QID 100개, 더미 ID 0개 |
 
 ## 2. 앱 콘텐츠와 데이터 보안
 
@@ -80,14 +93,16 @@ store-assets/store-listing.txt의 국문을 기본 등록정보에 입력하고 
 - 휴대전화: screenshot-01-map.png부터 screenshot-04-profile.png
 - 태블릿: screenshot-05-tablet-landscape.png
 
-스크린샷은 실제 에뮬레이터 앱 화면입니다. 현재 100개 장소는 기능 검증용 더미 데이터이므로 공개 출시 전에 실제 데이터로 다시 촬영합니다.
+스크린샷은 실제 에뮬레이터 앱 화면입니다. 2026-07-19에 API 35 휴대전화와 API 36 태블릿에서 Wikidata CC0 기반 실제 장소 100건으로 모두 다시 촬영했습니다.
 
-## 4. 비공개 테스트 버전 생성
+## 4. 비공개 테스트 버전 업데이트
+
+0.2.0-alpha2 versionCode 3은 게시 완료됐습니다. 실제 POI 교체판은 같은 Alpha 트랙에 올려 테스터의 옵트인을 유지합니다.
 
 1. Play Console의 테스트 및 출시에서 비공개 테스트 Alpha 트랙을 엽니다.
 2. 대한민국을 대상 국가로 확인합니다.
-3. 새 버전에 app-release.aab를 업로드합니다.
-4. 출시명을 0.2.0-alpha2로 입력합니다.
+3. 새 버전에 versionCode 4 app-release.aab를 업로드합니다.
+4. 출시명을 0.2.0-alpha3로 입력합니다.
 5. closed-test/release-notes-ko.txt와 release-notes-en.txt의 내용을 각 언어 태그에 입력합니다.
 6. 권한·데이터 보안 경고가 실제 앱 동작과 일치하는지 확인합니다.
 7. 저장 후 검토를 시작하고 비공개 테스트 출시를 게시합니다.
@@ -96,7 +111,7 @@ Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역�
 
 ## 5. 테스터 운영
 
-1. Alpha Testers 목록에 15명 이상을 등록합니다.
+1. Alpha Testers의 `젤리테스터` 이메일 목록 44명을 유지합니다.
 2. Play Console이 표시하는 실제 옵트인 링크를 공유합니다.
 3. 초대 계정으로 옵트인한 뒤 Play Store 설치 링크를 열게 합니다.
 4. tester-guide-ko.txt와 test-missions.md를 함께 전달합니다.
@@ -105,6 +120,8 @@ Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역�
 일반적인 옵트인 주소 형식은 아래와 같지만, 콘솔의 실제 주소를 우선합니다.
 
     https://play.google.com/apps/testing/com.mypaso.app
+
+2026-07-19 Play 대시보드에서 `12명 이상의 테스터가 옵트인함` 조건은 완료 표시됐습니다. `12명 이상이 14일 연속 참여` 조건은 아직 진행 중이며, 테스터가 중간에 옵트아웃하지 않도록 유지합니다.
 
 ## 6. 14일 운영표
 
@@ -130,7 +147,7 @@ Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역�
 - 타겟 사용자와 앱의 가치
 - 공개 출시가 가능하다고 판단한 증거
 
-공개 신청 전에는 더미 POI 100건을 출처·좌표·라이선스가 검증된 실제 POI로 교체하고 새 AAB, 설명, 스크린샷을 다시 검증합니다.
+더미 POI 100건의 교체, CC0 출처 매니페스트, 새 AAB, 설명과 스크린샷 재검증은 versionCode 4에서 완료했습니다. 프로덕션 신청 전에는 운영·폐업과 출입구 수준 좌표가 중요한 POI를 사람 검수하고, Play 대시보드의 14일 연속 조건을 최종 확인합니다.
 
 ## 알려진 환경 조건
 

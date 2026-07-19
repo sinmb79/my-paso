@@ -1,5 +1,7 @@
 # Android 비공개 테스트 로컬 검증 보고서
 
+> 역사 기록: 이 문서는 2026-07-16의 `0.1.0` (`versionCode 1`) 로컬 검증 스냅샷입니다. 현재 게시된 alpha2는 `report-0.2.0.md`, 다음 alpha3 후보는 `report-0.2.0-alpha3.md`를 기준으로 합니다. 아래 경로의 로컬 산출물은 후속 빌드로 교체됐습니다.
+
 기준일: 2026-07-16
 앱: `Hello! My Paso!`
 패키지: `com.mypaso.app`

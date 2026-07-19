@@ -15,13 +15,13 @@
 | feature-graphic.html | 1024 x 500 | 그래픽 재생성 원본 |
 | store-listing.txt | 국문·영문 | Play Console 등록 문구 |
 
-feature-graphic.png는 앱에 통합한 public/brand/paso-memory-trail-hero.webp를 사용해 제품의 기억 산책 콘셉트와 실제 UI의 색감을 맞췄습니다. 스크린샷은 합성 화면이 아니라 Android 에뮬레이터에서 실행한 0.2.0 앱 화면입니다.
+feature-graphic.png는 앱에 통합한 public/brand/paso-memory-trail-hero.webp를 사용해 제품의 기억 산책 콘셉트와 실제 UI의 색감을 맞췄습니다. 스크린샷은 합성 화면이 아니라 Android 에뮬레이터에서 실행한 0.2.0 `versionCode 4` 앱 화면입니다. 휴대전화 API 35와 태블릿 API 36에서 Wikidata CC0 기반 실제 장소 100건으로 다시 촬영했습니다.
 
 재생성:
 
     npm run play:assets
 
-공개 출시 전에는 더미 POI를 실제 데이터로 교체한 뒤 동일한 절차로 스크린샷을 다시 촬영합니다.
+스크린샷 재검수: 2026-07-19 완료. 지도·탐색 화면에 더미 ID와 테스트 장소명이 없고 실제 장소명과 `등록 장소` 문구가 표시됩니다.
 
 개인정보처리방침:
 

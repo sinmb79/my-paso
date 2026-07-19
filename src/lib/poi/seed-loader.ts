@@ -1,15 +1,10 @@
-import { countPOIs, insertPOIs } from "@/lib/db/queries";
-import { loadBundledDummyPOIs } from "@/lib/poi/dummy-seed";
+import { insertPOIs } from "@/lib/db/queries";
+import { loadBundledLicensedPOIs } from "@/lib/poi/licensed-seed";
 import type { PasoDatabase } from "@/types";
 
 export async function loadSeedPOIs(database: PasoDatabase) {
-  const existingCount = await countPOIs(database);
-  if (existingCount > 0) {
-    return 0;
-  }
+  const licensedSeed = await loadBundledLicensedPOIs();
+  await insertPOIs(database, licensedSeed);
 
-  const dummySeed = await loadBundledDummyPOIs();
-  await insertPOIs(database, dummySeed);
-
-  return dummySeed.length;
+  return licensedSeed.length;
 }

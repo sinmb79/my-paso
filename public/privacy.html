@@ -57,7 +57,7 @@
     <li><strong>카메라·사진:</strong> 사용자가 방문 사진을 추가할 때 촬영하거나 선택한 이미지에만 접근합니다.</li>
     <li><strong>파일:</strong> 사용자가 요청한 JSON 백업을 문서 영역에 저장하고 공유 시트를 열기 위해 사용합니다.</li>
   </ul>
-  <p>100개의 번들 POI를 사용하므로 외부 공공 API 키 없이도 핵심 기능이 동작합니다. 인터넷 권한은 앱 콘텐츠 로드와 선택적 지도 기능에 사용되며, 개인 기록을 개발자 서버로 업로드하지 않습니다.</p>
+  <p>100개의 번들 POI를 사용하므로 외부 공공 API 키 없이도 핵심 기능이 동작합니다. 장소 이름, 유형, 공개 좌표와 행정구역은 2026년 7월 19일 기준 <a href="https://www.wikidata.org/">Wikidata</a> 구조화 데이터 스냅샷이며 <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>으로 제공됩니다. 이는 사용자 데이터가 아니며, 런타임에 Wikidata로 개인 기록을 전송하지 않습니다. 인터넷 권한은 앱 콘텐츠 로드와 선택적 지도 기능에 사용되며, 개인 기록을 개발자 서버로 업로드하지 않습니다.</p>
 
   <h2>5. 보관, 백업 및 삭제</h2>
   <p>앱 데이터는 사용자가 앱 데이터를 지우거나 앱을 삭제할 때까지 기기에 남습니다. Android 클라우드 백업과 기기 간 자동 전송은 앱 설정에서 제외했습니다. JSON 백업에는 위치, 방문 기록, 태그와 사진 데이터가 포함될 수 있고 사용자가 선택한 위치에 별도로 저장되므로 사용자가 직접 관리하고 삭제해야 합니다.</p>
@@ -78,7 +78,7 @@
   <p>Hello! My Paso! closed-test version 0.2.0 requires no account and does not collect or share personal or app-usage data with developer servers. It contains no ads, tracking, or remote analytics.</p>
   <p>Profiles, saved places and tags, visits, manual/GPS verification state, visit coordinates, reviews, photos, XP, and settings remain in app-private on-device storage. Location is accessed only when the user explicitly checks an on-site visit; background location is not collected. Camera or photo access occurs only when the user adds a visit photo. File access is used to write a user-requested backup and open the native share sheet.</p>
   <p>Local data remains until the user clears app data or uninstalls the app. Android cloud backup and automatic device transfer are disabled. Exported JSON backups can include location and photo data, are not separately encrypted, and must be protected or deleted by the user.</p>
-  <p>The bundled 100 POIs let core features work without public API keys. Internet access does not upload personal journal records to developer servers. Material changes to permissions, external transfers, accounts, analytics, or sync will be reflected in this policy and the store Data safety declaration before release.</p>
+  <p>The bundled 100 POIs let core features work without public API keys. Public place names, types, coordinates, and administrative labels come from a 19 July 2026 snapshot of <a href="https://www.wikidata.org/">Wikidata</a> structured data under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. These public place records are not user data, and the app does not send personal journal records to Wikidata or developer servers. Material changes to permissions, external transfers, accounts, analytics, or sync will be reflected in this policy and the store Data safety declaration before release.</p>
 
   <p class="updated">Effective and last updated: 2026-07-19</p>
 </body>

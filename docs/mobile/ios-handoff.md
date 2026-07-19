@@ -49,13 +49,13 @@ This document is the execution handoff for the `Hello! My Paso!` Capacitor iOS p
 
 ## WKWebView Persistence Smoke Test
 
-1. 앱 첫 실행 후 POI 더미 데이터와 로컬 저널 UI가 로드되는지 확인한다.
+1. 앱 첫 실행 후 Wikidata CC0 기반 번들 POI 100건과 로컬 저널 UI가 로드되는지 확인한다.
 2. 방문 기록 하나를 생성하거나, 최소한 로컬 상태를 변화시키는 상호작용을 수행한다.
 3. 앱을 완전히 종료하고 다시 실행한다.
 4. 변경한 로컬 상태가 유지되면 통과다.
 5. 상태가 사라지면 `storageMode`와 WebView 저장소 제한을 기록하고 iOS 배포를 중단한다.
 
-1. After first launch, verify dummy POIs and the local journal UI load.
+1. After first launch, verify the 100 bundled Wikidata CC0 POIs and the local journal UI load.
 2. Create one visit or perform any interaction that changes persisted local state.
 3. Fully terminate the app and relaunch it.
 4. Pass if the local state is still present.

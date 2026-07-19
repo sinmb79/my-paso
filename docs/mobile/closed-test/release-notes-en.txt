@@ -1,5 +1,7 @@
-Hello! My Paso! 0.2.0 closed-test update.
+Hello! My Paso! 0.2.0-alpha3 closed-test update.
 
+- Replaced 100 generated test points with 100 bundled South Korean places from Wikidata CC0 data
+- Preserved legacy alpha visit history while showing only real places in discovery
 - Save places, tags, and search or filter results
 - Record GPS-verified or manual visits with photos and notes
 - Review timelines, monthly recaps, achievements, and level progress

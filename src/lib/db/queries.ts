@@ -229,7 +229,7 @@ export async function insertPOIs(database: PasoDatabase, pois: POI[]) {
   }
 
   const query = `
-    INSERT OR IGNORE INTO pois (
+    INSERT INTO pois (
       id,
       name,
       description,
@@ -241,7 +241,18 @@ export async function insertPOIs(database: PasoDatabase, pois: POI[]) {
       district,
       source,
       base_xp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      description = excluded.description,
+      category = excluded.category,
+      latitude = excluded.latitude,
+      longitude = excluded.longitude,
+      geofence_radius_m = excluded.geofence_radius_m,
+      region = excluded.region,
+      district = excluded.district,
+      source = excluded.source,
+      base_xp = excluded.base_xp;
   `;
 
   await database.sqlite3.executeBatch(
@@ -265,7 +276,11 @@ export async function insertPOIs(database: PasoDatabase, pois: POI[]) {
   return pois.length;
 }
 
-export async function getPOIs(database: PasoDatabase, limit = 100) {
+async function queryPOIs(
+  database: PasoDatabase,
+  limit: number,
+  includeLegacy: boolean,
+) {
   const result = await database.sqlite3.execWithParams(
     database.db,
     `
@@ -280,8 +295,9 @@ export async function getPOIs(database: PasoDatabase, limit = 100) {
         region,
         district,
         source,
-      base_xp
+        base_xp
       FROM pois
+      ${includeLegacy ? "" : "WHERE source <> 'dummy'"}
       ORDER BY id
       LIMIT ?;
     `,
@@ -317,8 +333,12 @@ export async function getPOIs(database: PasoDatabase, limit = 100) {
   );
 }
 
+export function getPOIs(database: PasoDatabase, limit = 100) {
+  return queryPOIs(database, limit, false);
+}
+
 export function getAllPOIs(database: PasoDatabase) {
-  return getPOIs(database, -1);
+  return queryPOIs(database, -1, true);
 }
 
 export type PlaceStateFilter = "all" | "saved" | "visited";
@@ -338,7 +358,7 @@ export async function getPlaceSummaries(
   database: PasoDatabase,
   options: PlaceSearchOptions = {},
 ): Promise<PlaceSummary[]> {
-  const conditions: string[] = [];
+  const conditions: string[] = ["p.source <> 'dummy'"];
   const bindings: Array<string | number> = [];
   const query = options.query?.trim();
 
