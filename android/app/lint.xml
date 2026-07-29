@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Capacitor/Cordova loads this compatibility resource by name at runtime. -->
+    <issue id="UnusedResources">
+        <ignore path="src/main/res/xml/config.xml" />
+    </issue>
+
+    <!-- API 24-25 uses the branded full-bleed fallback; API 26+ uses adaptive masks. -->
+    <issue id="IconLauncherShape">
+        <ignore regexp=".*[\\/]mipmap-(?:m|h|xh|xxh|xxxh)dpi[\\/]ic_launcher\.png" />
+    </issue>
+
+    <!-- These are configuration-specific full-screen splash images, not density-scaled icons. -->
+    <issue id="IconDipSize">
+        <ignore regexp=".*[\\/]drawable(?:-[^\\/]+)?[\\/]splash\.png" />
+    </issue>
+    <issue id="IconDuplicatesConfig">
+        <ignore regexp=".*[\\/]drawable(?:-[^\\/]+)?[\\/]splash\.png" />
+    </issue>
+    <issue id="IconLocation">
+        <ignore regexp=".*[\\/]drawable(?:-[^\\/]+)?[\\/]splash\.png" />
+    </issue>
+</lint>

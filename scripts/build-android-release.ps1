@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateRange(1, 2100000000)]
-    [int]$VersionCode = 4,
+    [int]$VersionCode = 5,
 
     [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$')]
     [string]$VersionName = '0.2.0',

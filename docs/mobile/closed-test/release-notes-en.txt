@@ -1,8 +1,9 @@
-Hello! My Paso! 0.2.0-alpha3 closed-test update.
+Hello! My Paso! 0.2.0-alpha4 closed-test update.
 
-- Replaced 100 generated test points with 100 bundled South Korean places from Wikidata CC0
-- Preserved legacy visit history while showing only real places in discovery
-- Improved saved places, tags, search, visits, photos, notes, ratings, recaps, achievements, and phone/tablet layouts
-- Added checksum-validated full backup and restore
+- Improved Android 15/16 edge-to-edge and system-bar insets
+- Stabilized input resizing when the keyboard opens
+- Updated the camera photo chooser for current Android behavior
+- Added themed app-icon support and cleaned Android build warnings
+- Applied Capacitor, Camera, and Next.js security and stability patches
 
 Location and camera are used only when you choose those features. No accounts, ads, tracking, or analytics.
