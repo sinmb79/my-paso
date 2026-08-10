@@ -20,6 +20,12 @@ describe("local AI model catalog", () => {
       ),
     ).toBe(true);
   });
+
+  it("identifies the SKT A.X preset as Apache-2.0 licensed", () => {
+    const sktPreset = LOCAL_AI_MODEL_CATALOG.find((item) => item.vendor === "skt");
+
+    expect(sktPreset?.licenseNotice).toMatch(/apache(?:\s+license)?\s*2\.0/i);
+  });
 });
 
 describe("local AI endpoint policy", () => {
@@ -64,6 +70,23 @@ describe("local AI endpoint policy", () => {
     "http://2130706433:8000",
   ])("rejects unsafe endpoint %s", (endpoint) => {
     expect(validateLocalAIEndpoint(endpoint)).toMatchObject({ ok: false });
+  });
+
+  it.each([
+    ["http://127.0.0.1:8000?", "query_not_allowed"],
+    ["http://127.0.0.1:8000#", "fragment_not_allowed"],
+  ] as const)("rejects a bare loopback delimiter in %s", (endpoint, reason) => {
+    expect(validateLocalAIEndpoint(endpoint)).toMatchObject({ ok: false, reason });
+  });
+
+  it.each([
+    ["http://192.168.0.20:8000?", "query_not_allowed"],
+    ["http://192.168.0.20:8000#", "fragment_not_allowed"],
+  ] as const)("rejects a bare private-LAN delimiter in %s", (endpoint, reason) => {
+    expect(validateLocalAIEndpoint(endpoint, endpoint)).toMatchObject({
+      ok: false,
+      reason,
+    });
   });
 
   it.each([

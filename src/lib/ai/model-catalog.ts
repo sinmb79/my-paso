@@ -32,6 +32,7 @@ export const LOCAL_AI_MODEL_CATALOG: readonly LocalAIModelCatalogItem[] = [
     textModel: "A.X-4.0-Light",
     visionModel: "A.X-4.0-VL-Light",
     modelCardUrl: "https://huggingface.co/skt/A.X-4.0-Light",
-    licenseNotice: "A.X vision models can require substantial resources; use an owner-controlled runtime.",
+    licenseNotice:
+      "A.X-4.0-Light is licensed under Apache License 2.0; vision models can require substantial resources.",
   },
 ];

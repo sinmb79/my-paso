@@ -59,10 +59,10 @@ export function validateLocalAIEndpoint(
   if (parsed.username || parsed.password) {
     return { ok: false, reason: "credentials_not_allowed" };
   }
-  if (parsed.search) {
+  if (endpoint.includes("?")) {
     return { ok: false, reason: "query_not_allowed" };
   }
-  if (parsed.hash) {
+  if (endpoint.includes("#")) {
     return { ok: false, reason: "fragment_not_allowed" };
   }
   if (parsed.pathname !== "/") {
