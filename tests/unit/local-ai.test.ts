@@ -4,6 +4,8 @@ import { validateLocalAIDraft } from "@/lib/ai/draft-validator";
 import { LOCAL_AI_MODEL_CATALOG } from "@/lib/ai/model-catalog";
 import { createOpenAICompatibleAssistant } from "@/lib/ai/openai-compatible";
 import * as endpointPolicy from "@/lib/ai/endpoint-policy";
+import { loadLocalAISettings, saveLocalAISettings, clearLocalAISettings } from "@/lib/ai/preferences";
+import { sanitizePhotoForLocalAI } from "@/lib/ai/photo-sanitizer";
 import type { LocalAISettings } from "@/lib/ai/contracts";
 
 describe("local AI model catalog", () => {
@@ -220,6 +222,133 @@ const localAISettings = (
   model: "local-korean-model",
   capability,
   confirmedPrivateLANEndpoint: null,
+});
+
+describe("local AI photo sanitizer", () => {
+  const originalCreateElement = document.createElement.bind(document);
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it.each(["image/jpeg", "image/png", "image/webp"])(
+    "accepts a supported %s data URL",
+    async (mimeType) => {
+      installPhotoSanitizerDomDouble(2400, 1600);
+
+      await expect(
+        sanitizePhotoForLocalAI(`data:${mimeType};base64,cGhvdG8=`),
+      ).resolves.toBe("data:image/jpeg;base64,sanitized-photo");
+    },
+  );
+
+  it.each([
+    "data:image/gif;base64,R0lGODlh",
+    "data:image/jpeg,missing-base64-marker",
+    "data:image/jpeg;base64,not valid base64!",
+    "not-a-data-url",
+  ])("rejects unsupported or malformed image input %s", async (input) => {
+    await expect(sanitizePhotoForLocalAI(input)).rejects.toThrow(/photo/i);
+  });
+
+  it("re-encodes a fresh bounded canvas without mutating or persisting the original input", async () => {
+    const { canvas, drawImage } = installPhotoSanitizerDomDouble(2400, 1600);
+    const input = "data:image/png;base64,b3JpZ2luYWwtcGhvdG8=";
+
+    await expect(sanitizePhotoForLocalAI(input)).resolves.toBe(
+      "data:image/jpeg;base64,sanitized-photo",
+    );
+
+    expect(input).toBe("data:image/png;base64,b3JpZ2luYWwtcGhvdG8=");
+    expect(canvas.width).toBe(1280);
+    expect(canvas.height).toBe(853);
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 1280, 853);
+    expect(canvas.toDataURL).toHaveBeenCalledWith("image/jpeg", 0.82);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it.each([
+    [0, 1600],
+    [2400, 0],
+    [Number.NaN, 1600],
+  ])("rejects a decoded image with invalid dimensions %s by %s", async (width, height) => {
+    installPhotoSanitizerDomDouble(width, height);
+
+    await expect(
+      sanitizePhotoForLocalAI("data:image/jpeg;base64,cGhvdG8="),
+    ).rejects.toThrow(/decode|dimension|photo/i);
+  });
+
+  function installPhotoSanitizerDomDouble(width: number, height: number) {
+    const drawImage = vi.fn();
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ({ drawImage })),
+      toDataURL: vi.fn(() => "data:image/jpeg;base64,sanitized-photo"),
+    } as unknown as HTMLCanvasElement;
+
+    class DecodedImage {
+      naturalWidth = width;
+      naturalHeight = height;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+
+    vi.stubGlobal("Image", DecodedImage);
+    vi.spyOn(document, "createElement").mockImplementation((tagName, options) => {
+      if (tagName === "canvas") {
+        return canvas;
+      }
+      return originalCreateElement(tagName, options);
+    });
+
+    return { canvas, drawImage };
+  }
+});
+
+describe("local AI settings persistence", () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("round-trips exactly the approved LocalAISettings fields", async () => {
+    const settings = {
+      ...localAISettings("vision"),
+      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+      apiKey: "must-not-persist",
+      token: "must-not-persist",
+      auth: "must-not-persist",
+      secret: "must-not-persist",
+    } as LocalAISettings & Record<string, string>;
+
+    await saveLocalAISettings(settings);
+
+    expect(await loadLocalAISettings()).toEqual({
+      enabled: true,
+      vendor: "naver",
+      endpoint: "http://127.0.0.1:8000",
+      model: "local-korean-model",
+      capability: "vision",
+      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+    });
+    expect(localStorage.getItem(localStorage.key(0) ?? "")).not.toMatch(
+      /apiKey|token|auth|secret/i,
+    );
+  });
+
+  it("removes the persisted Local AI settings", async () => {
+    await saveLocalAISettings(localAISettings());
+    await clearLocalAISettings();
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+  });
 });
 
 const jsonResponse = (value: unknown, status = 200): Response => {

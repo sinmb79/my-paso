@@ -19,3 +19,12 @@ export async function setSetting(key: string, value: string) {
 
   globalThis.localStorage?.setItem(key, value);
 }
+
+export async function removeSetting(key: string) {
+  if (isNative()) {
+    await Preferences.remove({ key });
+    return;
+  }
+
+  globalThis.localStorage?.removeItem(key);
+}

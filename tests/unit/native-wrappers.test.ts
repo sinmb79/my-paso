@@ -14,6 +14,7 @@ const filesystemState = {
 };
 
 const shareMock = vi.fn(async () => ({ activityType: "test" }));
+const preferenceRemoveMock = vi.fn(async () => undefined);
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
@@ -53,12 +54,21 @@ vi.mock("@capacitor/share", () => ({
   },
 }));
 
+vi.mock("@capacitor/preferences", () => ({
+  Preferences: {
+    get: vi.fn(async () => ({ value: null })),
+    set: vi.fn(async () => undefined),
+    remove: preferenceRemoveMock,
+  },
+}));
+
 describe("native wrappers", () => {
   beforeEach(() => {
     capacitorState.isNative = false;
     capacitorState.platform = "web";
     localStorage.clear();
     shareMock.mockClear();
+    preferenceRemoveMock.mockClear();
   });
 
   it("reports the active platform through Capacitor", async () => {
@@ -77,6 +87,26 @@ describe("native wrappers", () => {
     await setSetting("map-style", "classic");
 
     expect(await getSetting("map-style")).toBe("classic");
+  });
+
+  it("removes a setting from localStorage on the web", async () => {
+    const { getSetting, removeSetting, setSetting } = await import(
+      "@/lib/native/preferences"
+    );
+    await setSetting("map-style", "classic");
+
+    await removeSetting("map-style");
+
+    await expect(getSetting("map-style")).resolves.toBeNull();
+  });
+
+  it("removes a setting through Capacitor Preferences on native platforms", async () => {
+    capacitorState.isNative = true;
+    const { removeSetting } = await import("@/lib/native/preferences");
+
+    await removeSetting("map-style");
+
+    expect(preferenceRemoveMock).toHaveBeenCalledWith({ key: "map-style" });
   });
 
   it("reads a native camera photo when running natively", async () => {
