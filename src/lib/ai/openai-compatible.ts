@@ -2,6 +2,8 @@ import { buildLocalAIRequest } from "./context-builder";
 import type { LocalAIDraft, LocalAIRequestPreview, LocalAISettings } from "./contracts";
 import { validateLocalAIDraft } from "./draft-validator";
 import * as endpointPolicy from "./endpoint-policy";
+import * as loopbackAIHttp from "@/lib/native/loopback-ai-http";
+import * as nativePlatform from "@/lib/native/platform";
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_ERROR_BODY_BYTES = 512;
@@ -99,6 +101,7 @@ export function createOpenAICompatibleAssistant(options: {
   generate(preview: LocalAIRequestPreview, signal?: AbortSignal): Promise<LocalAIDraft>;
 } {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const hasInjectedFetch = options.fetchImpl !== undefined;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   async function postChatCompletions(
@@ -129,13 +132,29 @@ export function createOpenAICompatibleAssistant(options: {
     }, timeoutMs);
 
     try {
-      const response = await fetchImpl(`${endpoint.origin}/v1/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: options.settings.model, messages }),
-        redirect: "error",
-        signal: controller.signal,
-      });
+      const url = `${endpoint.origin}/v1/chat/completions`;
+      const body = JSON.stringify({ model: options.settings.model, messages });
+      const response = loopbackAIHttp.shouldUseAndroidLoopbackTransport({
+        platform: nativePlatform.getPlatform(),
+        endpointOrigin: endpoint.origin,
+        hasInjectedFetch,
+      })
+        ? await loopbackAIHttp
+            .postAndroidLoopbackAI({ url, body, signal: controller.signal })
+            .then(
+              (nativeResponse) =>
+                new Response(nativeResponse.body, {
+                  status: nativeResponse.status,
+                  headers: { "Content-Type": "application/json" },
+                }),
+            )
+        : await fetchImpl(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            redirect: "error",
+            signal: controller.signal,
+          });
       if (!response.ok) {
         const detail = await readBoundedError(response);
         throw new Error(

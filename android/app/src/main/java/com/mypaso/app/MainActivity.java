@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.AppTheme_NoActionBar);
         EdgeToEdge.enable(this);
+        registerPlugin(LoopbackAIHttpPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

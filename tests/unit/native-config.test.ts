@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import capacitorConfig from "../../capacitor.config";
+
 const root = process.cwd();
 
 describe("native privacy and permission configuration", () => {
@@ -78,6 +80,69 @@ describe("native privacy and permission configuration", () => {
     );
 
     expect(manifest).toContain('android:windowSoftInputMode="adjustResize"');
+  });
+
+  it("permits Android cleartext only for exact loopback destinations", () => {
+    const manifest = readFileSync(
+      join(root, "android/app/src/main/AndroidManifest.xml"),
+      "utf8",
+    );
+    const networkPolicyPath = join(
+      root,
+      "android/app/src/main/res/xml/network_security_config.xml",
+    );
+    expect(existsSync(networkPolicyPath)).toBe(true);
+    const networkPolicy = readFileSync(networkPolicyPath, "utf8");
+    const document = new DOMParser().parseFromString(networkPolicy, "application/xml");
+
+    expect(document.querySelector("parsererror")).toBeNull();
+    expect(manifest).toContain(
+      'android:networkSecurityConfig="@xml/network_security_config"',
+    );
+    expect(manifest).not.toContain("android:usesCleartextTraffic");
+
+    const baseConfig = document.querySelector("network-security-config > base-config");
+    expect(baseConfig?.getAttribute("cleartextTrafficPermitted")).toBe("false");
+
+    const cleartextConfigs = Array.from(
+      document.querySelectorAll('domain-config[cleartextTrafficPermitted="true"]'),
+    );
+    expect(cleartextConfigs).toHaveLength(1);
+    const domains = Array.from(cleartextConfigs[0].querySelectorAll(":scope > domain"));
+    expect(
+      domains.map((domain) => ({
+        host: domain.textContent?.trim(),
+        includeSubdomains: domain.getAttribute("includeSubdomains"),
+      })),
+    ).toEqual([
+      { host: "localhost", includeSubdomains: "false" },
+      { host: "127.0.0.1", includeSubdomains: "false" },
+      { host: "::1", includeSubdomains: "false" },
+    ]);
+  });
+
+  it("keeps mixed content and the global Capacitor HTTP patch disabled", () => {
+    expect(capacitorConfig.server?.androidScheme).toBe("https");
+    expect(capacitorConfig.android?.allowMixedContent).not.toBe(true);
+    expect(capacitorConfig.plugins?.CapacitorHttp?.enabled).not.toBe(true);
+  });
+
+  it("registers the purpose-built loopback plugin before bridge creation", () => {
+    const mainActivity = readFileSync(
+      join(
+        root,
+        "android/app/src/main/java/com/mypaso/app/MainActivity.java",
+      ),
+      "utf8",
+    );
+
+    const registrationIndex = mainActivity.indexOf(
+      "registerPlugin(LoopbackAIHttpPlugin.class);",
+    );
+    const bridgeInitIndex = mainActivity.indexOf("super.onCreate(savedInstanceState);");
+
+    expect(registrationIndex).toBeGreaterThan(-1);
+    expect(bridgeInitIndex).toBeGreaterThan(registrationIndex);
   });
 
   it("installs debug builds alongside the signed release app during QA", () => {

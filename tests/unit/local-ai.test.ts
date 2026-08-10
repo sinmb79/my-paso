@@ -4,6 +4,8 @@ import { validateLocalAIDraft } from "@/lib/ai/draft-validator";
 import { LOCAL_AI_MODEL_CATALOG } from "@/lib/ai/model-catalog";
 import { createOpenAICompatibleAssistant } from "@/lib/ai/openai-compatible";
 import * as endpointPolicy from "@/lib/ai/endpoint-policy";
+import * as loopbackAIHttp from "@/lib/native/loopback-ai-http";
+import * as nativePlatform from "@/lib/native/platform";
 import * as nativePreferences from "@/lib/native/preferences";
 import { loadLocalAISettings, saveLocalAISettings, clearLocalAISettings } from "@/lib/ai/preferences";
 import { sanitizePhotoForLocalAI } from "@/lib/ai/photo-sanitizer";
@@ -986,6 +988,131 @@ function streamingResponse(chunks: string[], status = 200) {
 }
 
 describe("OpenAI-compatible local assistant", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("uses the bounded native bridge only for Android HTTP loopback without an injected fetch", async () => {
+    const platform = vi.spyOn(nativePlatform, "getPlatform").mockReturnValue("android");
+    const bridge = vi
+      .spyOn(loopbackAIHttp, "postAndroidLoopbackAI")
+      .mockResolvedValue({
+        status: 200,
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: "초안", body: "본문", keywords: [] }),
+              },
+            },
+          ],
+        }),
+      });
+    const browserFetch = vi.spyOn(globalThis, "fetch");
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings("text"),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: "천지연폭포",
+        note: "물소리가 시원했다",
+        imageDataUrl: null,
+      }),
+    ).resolves.toMatchObject({ title: "초안", body: "본문" });
+
+    expect(bridge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "http://127.0.0.1:8000/v1/chat/completions",
+        body: expect.stringContaining('"model":"local-korean-model"'),
+      }),
+    );
+    expect(browserFetch).not.toHaveBeenCalled();
+    bridge.mockRestore();
+    browserFetch.mockRestore();
+    platform.mockRestore();
+  });
+
+  it("keeps an explicitly injected fetch on Android HTTP loopback", async () => {
+    const platform = vi.spyOn(nativePlatform, "getPlatform").mockReturnValue("android");
+    const bridge = vi.spyOn(loopbackAIHttp, "postAndroidLoopbackAI");
+    const fetchImpl = vi.fn().mockResolvedValue(draftChoice());
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+    });
+
+    await assistant.generate({
+      intent: "journal_draft",
+      placeName: null,
+      note: "기록",
+      imageDataUrl: null,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(bridge).not.toHaveBeenCalled();
+    bridge.mockRestore();
+    platform.mockRestore();
+  });
+
+  it("keeps Android HTTPS private-LAN requests on platform TLS fetch", async () => {
+    const platform = vi.spyOn(nativePlatform, "getPlatform").mockReturnValue("android");
+    const bridge = vi.spyOn(loopbackAIHttp, "postAndroidLoopbackAI");
+    const browserFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(draftChoice());
+    const endpoint = "https://192.168.0.20:8000";
+    const assistant = createOpenAICompatibleAssistant({
+      settings: {
+        ...localAISettings(),
+        endpoint,
+        confirmedPrivateLANEndpoint: endpoint,
+      },
+    });
+
+    await assistant.generate({
+      intent: "journal_draft",
+      placeName: null,
+      note: "기록",
+      imageDataUrl: null,
+    });
+
+    expect(browserFetch).toHaveBeenCalledWith(
+      `${endpoint}/v1/chat/completions`,
+      expect.objectContaining({ redirect: "error" }),
+    );
+    expect(bridge).not.toHaveBeenCalled();
+    bridge.mockRestore();
+    browserFetch.mockRestore();
+    platform.mockRestore();
+  });
+
+  it("does not follow or accept a native loopback redirect", async () => {
+    const platform = vi.spyOn(nativePlatform, "getPlatform").mockReturnValue("android");
+    const bridge = vi
+      .spyOn(loopbackAIHttp, "postAndroidLoopbackAI")
+      .mockResolvedValue({ status: 302, body: '{"redirect":"blocked"}' });
+    const browserFetch = vi.spyOn(globalThis, "fetch");
+    const assistant = createOpenAICompatibleAssistant({ settings: localAISettings() });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/^Local AI request failed \(302\)/);
+
+    expect(browserFetch).not.toHaveBeenCalled();
+    bridge.mockRestore();
+    browserFetch.mockRestore();
+    platform.mockRestore();
+  });
+
   it("posts a text-only bounded request to the validated chat endpoint", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(draftChoice());
     const assistant = createOpenAICompatibleAssistant({
