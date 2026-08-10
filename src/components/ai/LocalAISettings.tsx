@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { LocalAICapability, LocalAISettings as LocalAISettingsValue } from "@/lib/ai/contracts";
 import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
@@ -57,9 +57,15 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   const [draft, setDraft] = useState<LocalAISettingsValue>(defaultSettings);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const draftDirtyRef = useRef(false);
+  const hydratedSettingsRef = useRef(false);
 
   useEffect(() => {
-    if (assistant.settings) {
+    if (!assistant.settings || hydratedSettingsRef.current) {
+      return;
+    }
+    hydratedSettingsRef.current = true;
+    if (!draftDirtyRef.current) {
       setDraft(assistant.settings);
     }
   }, [assistant.settings]);
@@ -81,6 +87,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   }, [cancel, currentDraftCanTest]);
 
   const changeVendor = (vendor: LocalAISettingsValue["vendor"]) => {
+    draftDirtyRef.current = true;
     setDraft((current) => {
       const next = { ...current, vendor };
       return { ...next, model: selectModel(next, next.capability) };
@@ -89,6 +96,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   };
 
   const changeCapability = (capability: LocalAICapability) => {
+    draftDirtyRef.current = true;
     setDraft((current) => {
       const next = { ...current, capability };
       return { ...next, model: selectModel(next, capability) };
@@ -97,6 +105,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   };
 
   const changeEndpoint = (endpoint: string) => {
+    draftDirtyRef.current = true;
     setDraft((current) => {
       const next = { ...current, endpoint, confirmedPrivateLANEndpoint: null };
       return {
@@ -167,7 +176,10 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
             type="checkbox"
             checked={draft.enabled}
             disabled={!validEndpoint}
-            onChange={(event) => setDraft((current) => ({ ...current, enabled: validEndpoint && event.target.checked }))}
+            onChange={(event) => {
+              draftDirtyRef.current = true;
+              setDraft((current) => ({ ...current, enabled: validEndpoint && event.target.checked }));
+            }}
             aria-label="로컬 AI 사용"
           />
           사용
@@ -189,7 +201,10 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
 
         {validation.ok ? <p className="rounded-xl px-3 py-2 text-xs font-bold" style={{ backgroundColor: "var(--accent-bg)", color: "var(--text-primary)" }}>{validation.scope === "loopback" ? "이 브라우저/기기에서 실행 (이 브라우저의 localhost)" : "내 사설망 기기"}</p> : null}
         {privateEndpointNeedsConfirmation ? <label className="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border px-3 py-3 text-xs leading-relaxed" style={{ borderColor: "var(--warning)", color: "var(--text-secondary)" }}>
-          <input type="checkbox" className="mt-0.5" checked={draft.confirmedPrivateLANEndpoint === draft.endpoint} onChange={(event) => setDraft((current) => ({ ...current, confirmedPrivateLANEndpoint: event.target.checked ? current.endpoint : null }))} aria-label={`${draft.endpoint.replace(/^https?:\/\//, "")} 엔드포인트를 내가 관리`} />
+          <input type="checkbox" className="mt-0.5" checked={draft.confirmedPrivateLANEndpoint === draft.endpoint} onChange={(event) => {
+            draftDirtyRef.current = true;
+            setDraft((current) => ({ ...current, confirmedPrivateLANEndpoint: event.target.checked ? current.endpoint : null }));
+          }} aria-label={`${draft.endpoint.replace(/^https?:\/\//, "")} 엔드포인트를 내가 관리`} />
           <span>데이터가 이 기기를 떠날 수 있으며, 해당 엔드포인트 운영자가 내용을 볼 수 있습니다. 이 정확한 사설망 엔드포인트를 내가 관리함을 확인합니다.</span>
         </label> : null}
         {endpointMessage ? <p role="alert" className="text-xs leading-relaxed" style={{ color: "var(--warning)" }}>{endpointMessage}</p> : null}
@@ -204,7 +219,10 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
           </label>
           <label className="grid gap-1.5 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
             모델 ID
-            <input value={draft.model} onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))} className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+            <input value={draft.model} onChange={(event) => {
+              draftDirtyRef.current = true;
+              setDraft((current) => ({ ...current, model: event.target.value }));
+            }} className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
           </label>
         </div>
 

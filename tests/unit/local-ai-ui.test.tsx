@@ -476,6 +476,22 @@ describe("LocalAISettings", () => {
     expect(screen.getByRole("option", { name: /SK Telecom A.X/ })).toBeInTheDocument();
   });
 
+  it("keeps a user-dirty draft when delayed saved-settings hydration arrives", async () => {
+    const pendingLoad = deferred<ReturnType<typeof savedSettings> | null>();
+    vi.spyOn(localAIPreferences, "loadLocalAISettings").mockReturnValue(pendingLoad.promise);
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://192.168.0.20:8000" },
+    });
+    expect(screen.getByLabelText("로컬 실행 주소")).toHaveValue("http://192.168.0.20:8000");
+
+    await act(async () => pendingLoad.resolve(savedSettings("saved-model")));
+
+    expect(screen.getByLabelText("로컬 실행 주소")).toHaveValue("http://192.168.0.20:8000");
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
+  });
+
   it("blocks a public endpoint instead of persisting it", async () => {
     render(<LocalAISettings onToast={vi.fn()} />);
 
@@ -548,6 +564,23 @@ describe("LocalAISettings", () => {
     const requestInit = fetchImpl.mock.calls[0]?.[1] as RequestInit;
     expect(requestInit.body).toContain("HyperCLOVAX-SEED-Text-Instruct-0.5B");
     expect(requestInit.body).not.toContain("사용자가 쓴 짧은 메모");
+  });
+
+  it("keeps the current draft in sync after an explicit save and clear", async () => {
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://127.0.0.1:8000" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
+    fireEvent.click(screen.getByRole("button", { name: "설정 저장" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "연결 테스트" })).toBeEnabled());
+
+    fireEvent.click(screen.getByRole("button", { name: "설정 지우기" }));
+    await waitFor(() => expect(screen.getByLabelText("로컬 실행 주소")).toHaveValue(""));
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "연결 테스트" })).toBeDisabled();
+    await expect(loadLocalAISettings()).resolves.toBeNull();
   });
 
   it("never tests an obsolete saved runtime after the draft endpoint becomes invalid", async () => {
