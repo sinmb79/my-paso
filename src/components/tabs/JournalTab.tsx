@@ -19,6 +19,7 @@ import {
   saveJournalPhoto,
 } from "@/lib/media/photo-store";
 import { takePhoto } from "@/lib/native/camera";
+import { withBasePath } from "@/lib/config/site";
 
 type JournalTabProps = {
   model: PasoJournalController;
@@ -401,8 +402,17 @@ export function JournalTab({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-5" style={{ paddingBottom: "calc(var(--tab-height) + 1.25rem)" }}>
-      <header className="relative overflow-hidden rounded-[1.75rem] border px-5 py-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
-        <div className="absolute -bottom-12 -right-4 h-32 w-32 rounded-full opacity-70" style={{ background: "radial-gradient(circle, var(--accent-bg), transparent 70%)" }} />
+      <header className="relative overflow-hidden rounded-[var(--surface-radius)] border px-5 py-5 shadow-[var(--surface-shadow)]" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
+        <Image
+          src={withBasePath("/brand/paso-memory-trail-light.webp")}
+          alt=""
+          aria-hidden="true"
+          fill
+          priority
+          unoptimized
+          className="pointer-events-none object-cover opacity-[0.14]"
+          sizes="(max-width: 640px) 100vw, 520px"
+        />
         <p className="relative text-xs font-black uppercase tracking-[0.22em]" style={{ color: "var(--accent)" }}>Private memory trail</p>
         <h2 className="relative mt-1 text-2xl font-black tracking-tight" style={{ color: "var(--text-primary)" }}>오늘의 발자국을 남겨요</h2>
         <p className="relative mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>방문, 사진, 짧은 감상이 날짜를 따라 나만의 여행 기억이 됩니다.</p>
@@ -445,11 +455,11 @@ export function JournalTab({
             style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }}
           />
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex flex-wrap gap-2">
             {moods.map((item) => {
               const selected = mood === item.id;
               return (
-                <button key={item.id} type="button" onClick={() => setMood(item.id)} className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold" style={{ borderColor: selected ? item.color : "var(--border)", backgroundColor: selected ? "var(--bg-secondary)" : "transparent", color: selected ? "var(--text-primary)" : "var(--text-secondary)" }}>
+                <button key={item.id} type="button" onClick={() => setMood(item.id)} className="flex min-h-11 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold" style={{ borderColor: selected ? item.color : "var(--border)", backgroundColor: selected ? "var(--bg-secondary)" : "transparent", color: selected ? "var(--text-primary)" : "var(--text-secondary)" }}>
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                   {item.label}
                 </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { LocalAICapability, LocalAISettings as LocalAISettingsValue } from "@/lib/ai/contracts";
@@ -7,6 +8,7 @@ import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
 import { LOCAL_AI_MODEL_CATALOG } from "@/lib/ai/model-catalog";
 import { clearLocalAISettings, saveLocalAISettings } from "@/lib/ai/preferences";
 import { useLocalAssistant } from "@/hooks/useLocalAssistant";
+import { withBasePath } from "@/lib/config/site";
 
 type LocalAISettingsProps = {
   onToast: (message: string, type?: "success" | "error" | "info") => void;
@@ -164,7 +166,17 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   };
 
   return (
-    <section className="mt-6 rounded-[1.5rem] border p-4" aria-labelledby="local-ai-settings-title" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
+    <section className="relative mt-6 overflow-hidden rounded-[var(--surface-radius)] border p-4 shadow-[var(--surface-shadow)]" aria-labelledby="local-ai-settings-title" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
+      <Image
+        src={withBasePath("/brand/paso-memory-trail-light.webp")}
+        alt=""
+        aria-hidden="true"
+        fill
+        unoptimized
+        className="pointer-events-none object-cover opacity-[0.08]"
+        sizes="(max-width: 640px) 100vw, 520px"
+      />
+      <div className="relative">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>Owner-controlled</p>
@@ -237,6 +249,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
           <button type="button" onClick={() => void clear()} disabled={saving} className="min-h-11 rounded-xl border text-sm font-bold disabled:opacity-50" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>설정 지우기</button>
           <button type="button" onClick={() => void testConnection()} disabled={saving || assistant.loading || !currentDraftCanTest} className="min-h-11 rounded-xl border text-sm font-bold disabled:opacity-50" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>연결 테스트</button>
         </div>
+      </div>
       </div>
     </section>
   );

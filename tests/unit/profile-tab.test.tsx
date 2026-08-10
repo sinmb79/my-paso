@@ -70,6 +70,15 @@ describe("ProfileTab backup restore", () => {
     vi.clearAllMocks();
   });
 
+  it("shows the local-only archive status with a decorative dark texture", () => {
+    const { container } = render(<ProfileTab model={createJournalModel()} onToast={vi.fn()} />);
+
+    expect(screen.getByText("이 기기에 보관됨 · 계정 없음")).toBeInTheDocument();
+    expect(
+      container.querySelector('img[src*="paso-memory-trail-dark-v2.webp"][aria-hidden="true"]'),
+    ).toBeInTheDocument();
+  });
+
   it("shows a validated backup preview before restoring", async () => {
     const model = createJournalModel();
     const payload = { version: "2.0-local" };

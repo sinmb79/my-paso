@@ -12,6 +12,7 @@ import type {
 } from "@/lib/ai/contracts";
 import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
 import { sanitizePhotoForLocalAI } from "@/lib/ai/photo-sanitizer";
+import { withBasePath } from "@/lib/config/site";
 import type { POICategory } from "@/types";
 
 type LocalAIAssistantSheetProps = {
@@ -266,13 +267,23 @@ export function LocalAIAssistantSheet({
         aria-modal="true"
         aria-labelledby="local-ai-dialog-title"
         aria-describedby="local-ai-dialog-description"
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.75rem] border px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-2xl sm:max-w-2xl sm:rounded-[1.75rem] sm:p-6"
+        className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[var(--surface-radius)] border px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[var(--surface-shadow)] sm:max-w-2xl sm:rounded-[var(--surface-radius)] sm:p-6"
         style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}
       >
+        <Image
+          src={withBasePath("/brand/paso-memory-trail-light.webp")}
+          alt=""
+          aria-hidden="true"
+          fill
+          unoptimized
+          className="pointer-events-none object-cover opacity-[0.08]"
+          sizes="(max-width: 640px) 100vw, 672px"
+        />
+        <div className="relative">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
-              Owner-controlled local AI
+              로컬에서 초안 만들기
             </p>
             <h2 id="local-ai-dialog-title" className="mt-1 text-xl font-black" style={{ color: "var(--text-primary)" }}>
               로컬 AI 기록 도우미
@@ -490,6 +501,7 @@ export function LocalAIAssistantSheet({
               이 내용으로 AI 초안 만들기
             </button>
           )}
+        </div>
         </div>
       </section>
     </div>,

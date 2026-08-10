@@ -88,6 +88,7 @@ describe("LocalAIAssistantSheet", () => {
     ).toBeGreaterThan(50);
     expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "취소" })).toBeInTheDocument();
+    expect(screen.getByText("로컬에서 초안 만들기")).toBeInTheDocument();
     expect(screen.getByText("고요한 궁궐")).toBeInTheDocument();
     expect(screen.getByText("돌담을 천천히 걸었다.")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "AI 전송 사진 미리보기" })).toHaveAttribute(
@@ -96,6 +97,9 @@ describe("LocalAIAssistantSheet", () => {
     );
     expect(screen.getByText("http://127.0.0.1:8000")).toBeInTheDocument();
     expect(screen.getByText(/이 기기 또는 브라우저의 localhost/)).toBeInTheDocument();
+    expect(
+      document.querySelector('img[src*="paso-memory-trail-light.webp"][aria-hidden="true"]'),
+    ).toBeInTheDocument();
     expect(screen.getByText(/엔드포인트 운영자가 전송 내용을 볼 수 있어요/)).toBeInTheDocument();
     expect(screen.getByText(/EXIF를 제거한 임시 복사본만 전송/)).toBeInTheDocument();
     for (const excluded of ["정확한 위치", "사진 메타데이터", "다른 기록", "백업 데이터"]) {

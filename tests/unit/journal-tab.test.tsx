@@ -187,6 +187,23 @@ describe("JournalTab", () => {
     vi.unstubAllGlobals();
   });
 
+  it("keeps the memory-trail heading as real text with a decorative light texture", () => {
+    const { container } = render(<JournalTab model={createModel()} onToast={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "오늘의 발자국을 남겨요" })).toBeInTheDocument();
+    expect(
+      container.querySelector('img[src*="paso-memory-trail-light.webp"][aria-hidden="true"]'),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps each mood choice touch-sized without requiring a horizontal row", () => {
+    render(<JournalTab model={createModel()} onToast={vi.fn()} />);
+
+    for (const mood of ["호기심", "몰입", "평온", "활력"]) {
+      expect(screen.getByRole("button", { name: mood })).toHaveClass("min-h-11");
+    }
+  });
+
   it("renders an anniversary memory and review within the dated timeline", () => {
     render(
       <JournalTab

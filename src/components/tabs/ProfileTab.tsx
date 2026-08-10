@@ -149,17 +149,18 @@ export function ProfileTab({ model, onToast, now = new Date() }: ProfileTabProps
       className="min-h-0 flex-1 overflow-y-auto px-4 pt-5"
       style={{ paddingBottom: "calc(var(--tab-height) + 1.25rem)" }}
     >
-      <section className="relative overflow-hidden rounded-[1.85rem] border px-5 py-5 text-[#fff8e7] shadow-xl" style={{ borderColor: "rgba(251,191,36,0.28)", background: "linear-gradient(145deg, #17120d 0%, #2b1b0d 58%, #17120d 100%)" }}>
+      <section className="relative overflow-hidden rounded-[var(--surface-radius)] border px-5 py-5 text-[#fff8e7] shadow-[var(--surface-shadow)]" style={{ borderColor: "rgba(251,191,36,0.28)", backgroundColor: "var(--paso-night)" }}>
         <Image
-          src={withBasePath("/brand/paso-memory-trail-hero.webp")}
+          src={withBasePath("/brand/paso-memory-trail-dark-v2.webp")}
           alt=""
+          aria-hidden="true"
           fill
           priority
           unoptimized
-          className="object-cover opacity-90"
+          className="pointer-events-none object-cover opacity-70"
           sizes="(max-width: 640px) 100vw, 520px"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#17120d]/95 via-[#17120d]/60 to-[#17120d]/20" />
+        <div className="absolute inset-0 bg-[#0c0a09]/45" />
         <div className="relative flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border text-xl font-black" style={{ borderColor: "rgba(253,230,138,0.28)", backgroundColor: "rgba(251,191,36,0.12)", color: "#fbbf24" }}>
             {profile.nickname.charAt(0).toUpperCase()}
@@ -167,6 +168,7 @@ export function ProfileTab({ model, onToast, now = new Date() }: ProfileTabProps
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300/75">My Paso archive</p>
             <h2 className="truncate text-xl font-black tracking-tight">{profile.nickname}</h2>
+            <p className="mt-1 text-xs font-bold text-amber-100/80">이 기기에 보관됨 · 계정 없음</p>
           </div>
         </div>
         <div className="relative mt-6 flex items-end justify-between gap-4">
@@ -180,7 +182,7 @@ export function ProfileTab({ model, onToast, now = new Date() }: ProfileTabProps
           </div>
         </div>
         <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-200" style={{ width: `${Math.max(3, levelProgress.progress * 100)}%` }} />
+          <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.max(3, levelProgress.progress * 100)}%` }} />
         </div>
         <p className="relative mt-2 text-right text-xs font-bold text-amber-100/70">다음 레벨까지 {levelProgress.xpToNext} XP</p>
       </section>
