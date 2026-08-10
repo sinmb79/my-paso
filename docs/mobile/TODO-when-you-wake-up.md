@@ -20,7 +20,7 @@
 - [x] 최종 AAB: 8,277,246 bytes, SHA-256 `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679`.
 - [x] 새 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0을 확인했습니다.
 - [x] 더미 데이터와 더미 전용 AI 엔드포인트만 사용했습니다. 개인 사진·기록·비밀값을 증거와 스크린샷에 포함하지 않았습니다.
-- [x] GitHub 공개는 아직 Pending입니다. Play 검토 상태와 혼동하지 않습니다.
+- [x] GitHub 공개를 완료했습니다: [v0.3.0](https://github.com/sinmb79/my-paso/releases/tag/v0.3.0)는 public non-draft prerelease이며, annotated tag는 `b5eb35402deeb868c1fdb6d69f9f76443ae3a41c`로 peel됩니다. 이후 증적 문서 커밋은 docs-only이며 게시 태그를 이동하지 않습니다.
 
 ## 2026-07-19 역사 인계 기록 (현재 상태 아님)
 
