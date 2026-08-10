@@ -33,7 +33,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 | Store screenshots | final files inspected | five files; phone 1080 × 2400, tablet 2560 × 1440; Profile shows the full model ID and tablet app frame has no launcher dock | Passed |
 | Scope and secret scan | `git diff --check`, tracked-key extension scan, guarded credential-pattern scan | diff check exit 0; 0 tracked key/keystore files; only four expected identifier/documentation references and no credential values | Passed |
 | Play closed-test upload | Play Console | Alpha `0.3.0-alpha1`, versionCode 6 / versionName 0.3.0, submitted for review | Submitted / reviewing |
-| GitHub publication | tag, push, GitHub Release | public non-draft prerelease `v0.3.0` published; tag and remote delivery refs resolve to `b5eb35402deeb868c1fdb6d69f9f76443ae3a41c` | Published |
+| GitHub publication | tag, push, GitHub Release | public non-draft prerelease `v0.3.0` published; the tag and remote `master`, `codex/capacitor-mobile-delivery`, and `codex/paso-0.3.0-release` refs resolve to `b5eb35402deeb868c1fdb6d69f9f76443ae3a41c` | Published |
 
 ### Signing-verification qualification
 
@@ -67,7 +67,7 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 
 - Public release: [Hello! My Paso! 0.3.0](https://github.com/sinmb79/my-paso/releases/tag/v0.3.0), published at 2026-08-10T17:01:42Z (2026-08-11 02:01:42 KST).
 - Release metadata: non-draft prerelease, target commitish `master`, intentionally no attached assets.
-- The annotated `v0.3.0` tag peels to `b5eb35402deeb868c1fdb6d69f9f76443ae3a41c`; remote `master`, `delivery`, and `release` refs resolve to the same commit.
+- The annotated `v0.3.0` tag peels to `b5eb35402deeb868c1fdb6d69f9f76443ae3a41c`; remote `master`, `codex/capacitor-mobile-delivery`, and `codex/paso-0.3.0-release` refs resolve to the same commit.
 - This evidence update is a docs-only commit made after publication. It does not move or reinterpret the published tag.
 
 ## Artifact locations
