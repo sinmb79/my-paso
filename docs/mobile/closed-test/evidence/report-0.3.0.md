@@ -15,7 +15,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 
 | Gate | Command or observation | Observed evidence | Status |
 |---|---|---|---|
-| Full unit test suite | `npm test` | 288 tests across 32 files passed, exit 0 | Passed |
+| Full unit test suite | `npm test` | 289 tests across 32 files passed, exit 0 | Passed |
 | Typecheck | `npx tsc --noEmit` | exit 0 | Passed |
 | Dependency audits | `npm audit --audit-level=high` and production audit | full 0 advisories; production 0 advisories | Passed |
 | Lint | `npm run lint` | exit 0 | Passed |
@@ -49,6 +49,7 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 - Runtime public-address rejection was also exercised with `https://8.8.8.8`: the app showed `공개 인터넷 주소는 사용할 수 없습니다.`, disabled Save and Connection test, and produced no fixture request. The loopback setting was then restored and re-saved.
 - The rebuilt final APK was installed again with `-r`; retained data remained intact and the Profile footer reported `Hello! My Paso! v0.3.0 · Local-First`.
 - Native photo staging was exercised with a repository-owned dummy icon through Android Photo Picker. The selected image appeared as `방문 사진 미리보기 1`, was removed before save, and the temporary emulator media file was deleted; no personal photo was used.
+- The tablet capture used a temporary emulator-only immersive policy and disabled Launcher taskbar source; both settings were restored after capture. The 2560 × 1440 PNG is uncropped and unscaled.
 - Sensitive-marker logcat scan: 0 matches. Error logcat scan: 0 errors.
 - HTTPS private-LAN end-to-end execution is not claimed. It requires a system-trusted certificate chain, exact IP SAN, and WebView CORS support.
 
@@ -56,7 +57,7 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 
 - AAB: `android/app/build/outputs/bundle/release/app-release.aab`
 - Release APK: `android/app/build/outputs/apk/release/app-release.apk`
-- Store screenshots: `docs/mobile/store-assets/screenshot-01-map.png` through `screenshot-05-tablet-landscape.png`
+- Store screenshots: `docs/mobile/store-assets/screenshot-01-map.png` through `screenshot-05-tablet-landscape.png`; the final tablet capture preserves 2560 × 1440 source resolution and has no Launcher taskbar.
 
 ## Remaining release gates
 
