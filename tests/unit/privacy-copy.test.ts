@@ -21,6 +21,15 @@ const releaseFacingFiles = [
 ];
 
 describe("Paso 0.3.0 privacy copy", () => {
+  it("keeps each Play release note within the 500-character locale limit", () => {
+    for (const path of [
+      "docs/mobile/closed-test/release-notes-ko.txt",
+      "docs/mobile/closed-test/release-notes-en.txt",
+    ]) {
+      expect(read(path).trim().length, path).toBeLessThanOrEqual(500);
+    }
+  });
+
   it("explains the optional owner-controlled AI boundary in Korean and English", () => {
     const korean = `${read("README.md")}\n${read("public/privacy.html")}`;
     const english = `${read("README.en.md")}\n${read("public/privacy.html")}`;

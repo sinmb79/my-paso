@@ -1,10 +1,9 @@
-Hello! My Paso! 0.3.0 closed-test update.
+Paso 0.3.0 closed test:
 
-- Optional local AI drafts journal text, place classification, and keywords from selected photos and notes
-- HTTP/HTTPS localhost or an exact user-confirmed HTTPS private-LAN runtime is allowed; HTTP private-LAN, public, and cloud endpoints are blocked
-- Transfer preview and explicit confirmation, EXIF removal, and exclusion of precise location and unrelated records
-- AI output stays an editable draft and is never auto-saved, synchronized, or shared
-- Clearer place-distribution map, reduced marker overlap, and more compact Explore filters
-- Refined textures, contrast, keyboard focus, and small-screen accessibility
+- Local AI drafts text, categories and keywords from photos/notes
+- Preview, confirmation and EXIF removal before transfer
+- HTTP/HTTPS localhost or confirmed HTTPS private LAN only; HTTP LAN, public/cloud blocked
+- No auto-save, sync or sharing
+- Better map, filters, visuals and small-screen access
 
-AI is optional and no model is bundled. HTTPS private-LAN use requires a compatible owner-operated runtime with a valid TLS certificate; it is an off-device transfer, its operator can process the content, and platform TLS encrypts it in transit. HTTP localhost stays on-device. The developer does not operate the AI runtime or receive, retain, or inspect requests.
+No model bundled. HTTPS LAN needs an owner runtime and valid certificate; data leaves device. Developer neither operates it nor receives or retains requests.
