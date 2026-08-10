@@ -4,6 +4,7 @@ import { validateLocalAIDraft } from "@/lib/ai/draft-validator";
 import { LOCAL_AI_MODEL_CATALOG } from "@/lib/ai/model-catalog";
 import { createOpenAICompatibleAssistant } from "@/lib/ai/openai-compatible";
 import * as endpointPolicy from "@/lib/ai/endpoint-policy";
+import * as nativePreferences from "@/lib/native/preferences";
 import { loadLocalAISettings, saveLocalAISettings, clearLocalAISettings } from "@/lib/ai/preferences";
 import { sanitizePhotoForLocalAI } from "@/lib/ai/photo-sanitizer";
 import type { LocalAISettings } from "@/lib/ai/contracts";
@@ -239,7 +240,7 @@ describe("local AI photo sanitizer", () => {
       installPhotoSanitizerDomDouble(2400, 1600);
 
       await expect(
-        sanitizePhotoForLocalAI(`data:${mimeType};base64,cGhvdG8=`),
+        sanitizePhotoForLocalAI(photoDataUrl(mimeType, 2400, 1600)),
       ).resolves.toBe("data:image/jpeg;base64,sanitized-photo");
     },
   );
@@ -248,25 +249,119 @@ describe("local AI photo sanitizer", () => {
     "data:image/gif;base64,R0lGODlh",
     "data:image/jpeg,missing-base64-marker",
     "data:image/jpeg;base64,not valid base64!",
+    "data:image/jpeg;base64,A",
+    "data:image/jpeg;base64,A=",
+    "data:image/jpeg;base64,AA=",
+    "data:image/jpeg;base64,AAAA=",
+    "data:image/jpeg;base64,AAAA==",
     "not-a-data-url",
   ])("rejects unsupported or malformed image input %s", async (input) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(2400, 1600);
+
     await expect(sanitizePhotoForLocalAI(input)).rejects.toThrow(/photo/i);
+    expect(assignedSources).toEqual([]);
   });
 
   it("re-encodes a fresh bounded canvas without mutating or persisting the original input", async () => {
     const { canvas, drawImage } = installPhotoSanitizerDomDouble(2400, 1600);
-    const input = "data:image/png;base64,b3JpZ2luYWwtcGhvdG8=";
+    const input = photoDataUrl("image/png", 2400, 1600);
 
     await expect(sanitizePhotoForLocalAI(input)).resolves.toBe(
       "data:image/jpeg;base64,sanitized-photo",
     );
 
-    expect(input).toBe("data:image/png;base64,b3JpZ2luYWwtcGhvdG8=");
+    expect(input).toBe(photoDataUrl("image/png", 2400, 1600));
     expect(canvas.width).toBe(1280);
     expect(canvas.height).toBe(853);
     expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 1280, 853);
     expect(canvas.toDataURL).toHaveBeenCalledWith("image/jpeg", 0.82);
     expect(localStorage.length).toBe(0);
+  });
+
+  it("accepts the largest canonical encoded Data URL within the documented 16 MiB limit", async () => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+    const header = bytesToBase64(pngBytes(1, 1));
+    const payloadLength =
+      Math.floor((16 * 1024 * 1024 - "data:image/png;base64,".length) / 4) * 4;
+    const input = `data:image/png;base64,${header}${"A".repeat(payloadLength - header.length)}`;
+
+    await expect(sanitizePhotoForLocalAI(input)).resolves.toBe(
+      "data:image/jpeg;base64,sanitized-photo",
+    );
+    expect(assignedSources).toHaveLength(1);
+  });
+
+  it("rejects an oversized encoded Data URL before Base64 decoding or image assignment", async () => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+    const decode = vi.fn(() => {
+      throw new Error("Base64 decoder must not run");
+    });
+    vi.stubGlobal("atob", decode);
+    const input = `data:image/png;base64,${"A".repeat(16 * 1024 * 1024)}`;
+
+    await expect(sanitizePhotoForLocalAI(input)).rejects.toThrow(/too large/i);
+    expect(decode).not.toHaveBeenCalled();
+    expect(assignedSources).toEqual([]);
+  });
+
+  it.each([
+    ["image/png", 8193, 1],
+    ["image/jpeg", 1, 8193],
+    ["image/webp", 8000, 5001],
+  ] as const)(
+    "rejects unsafe %s source dimensions %s by %s before image assignment",
+    async (mimeType, width, height) => {
+      const { assignedSources } = installPhotoSanitizerDomDouble(width, height);
+
+      await expect(
+        sanitizePhotoForLocalAI(photoDataUrl(mimeType, width, height)),
+      ).rejects.toThrow(/dimension|pixel|photo/i);
+      expect(assignedSources).toEqual([]);
+    },
+  );
+
+  it.each(["image/png", "image/jpeg", "image/webp"] as const)(
+    "reads valid %s header dimensions before using the browser decoder",
+    async (mimeType) => {
+      const { assignedSources } = installPhotoSanitizerDomDouble(8000, 5000);
+
+      await expect(
+        sanitizePhotoForLocalAI(photoDataUrl(mimeType, 8000, 5000)),
+      ).resolves.toBe("data:image/jpeg;base64,sanitized-photo");
+      expect(assignedSources).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    (() => {
+      const bytes = pngBytes(1, 1);
+      bytes[11] = 12;
+      return ["data:image/png;base64," + bytesToBase64(bytes)];
+    })(),
+    (() => {
+      const bytes = webpVp8xBytes(1, 1);
+      bytes[16] = 0;
+      return ["data:image/webp;base64," + bytesToBase64(bytes)];
+    })(),
+  ])("rejects a malformed declared image header before image assignment", async (input) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+
+    await expect(sanitizePhotoForLocalAI(input)).rejects.toThrow(/photo|dimension/i);
+    expect(assignedSources).toEqual([]);
+  });
+
+  it.each([
+    ["JPEG SOF2", "data:image/jpeg;base64," + bytesToBase64(jpegBytes(2400, 1600, 0xc2))],
+    ["WebP VP8", "data:image/webp;base64," + bytesToBase64(webpVp8Bytes(2400, 1600))],
+    ["WebP VP8L", "data:image/webp;base64," + bytesToBase64(webpVp8lBytes(2400, 1600))],
+    ["WebP VP8X", "data:image/webp;base64," + bytesToBase64(webpVp8xBytes(2400, 1600))],
+  ])("recognizes dimensions from a valid %s header", async (_kind, input) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(2400, 1600);
+
+    await expect(sanitizePhotoForLocalAI(input)).resolves.toBe(
+      "data:image/jpeg;base64,sanitized-photo",
+    );
+    expect(assignedSources).toEqual([input]);
   });
 
   it.each([
@@ -277,7 +372,7 @@ describe("local AI photo sanitizer", () => {
     installPhotoSanitizerDomDouble(width, height);
 
     await expect(
-      sanitizePhotoForLocalAI("data:image/jpeg;base64,cGhvdG8="),
+      sanitizePhotoForLocalAI(photoDataUrl("image/jpeg", 2400, 1600)),
     ).rejects.toThrow(/decode|dimension|photo/i);
   });
 
@@ -290,13 +385,16 @@ describe("local AI photo sanitizer", () => {
       toDataURL: vi.fn(() => "data:image/jpeg;base64,sanitized-photo"),
     } as unknown as HTMLCanvasElement;
 
+    const assignedSources: string[] = [];
+
     class DecodedImage {
       naturalWidth = width;
       naturalHeight = height;
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;
 
-      set src(_value: string) {
+      set src(value: string) {
+        assignedSources.push(value);
         queueMicrotask(() => this.onload?.());
       }
     }
@@ -309,7 +407,86 @@ describe("local AI photo sanitizer", () => {
       return originalCreateElement(tagName, options);
     });
 
-    return { canvas, drawImage };
+    return { canvas, drawImage, assignedSources };
+  }
+
+  function photoDataUrl(mimeType: "image/jpeg" | "image/png" | "image/webp", width: number, height: number) {
+    const bytes =
+      mimeType === "image/png"
+        ? pngBytes(width, height)
+        : mimeType === "image/jpeg"
+          ? jpegBytes(width, height)
+          : webpVp8xBytes(width, height);
+    return `data:${mimeType};base64,${bytesToBase64(bytes)}`;
+  }
+
+  function pngBytes(width: number, height: number) {
+    return new Uint8Array([
+      137, 80, 78, 71, 13, 10, 26, 10,
+      0, 0, 0, 13, 73, 72, 68, 82,
+      ...uint32BigEndian(width),
+      ...uint32BigEndian(height),
+    ]);
+  }
+
+  function jpegBytes(width: number, height: number, sofMarker = 0xc0) {
+    return new Uint8Array([
+      0xff, 0xd8, 0xff, sofMarker, 0, 17, 8,
+      ...uint16BigEndian(height),
+      ...uint16BigEndian(width),
+      3, 1, 17, 0, 2, 17, 0, 3, 17, 0,
+    ]);
+  }
+
+  function webpVp8xBytes(width: number, height: number) {
+    return new Uint8Array([
+      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
+      86, 80, 56, 88, 10, 0, 0, 0, 0, 0, 0, 0,
+      ...uint24LittleEndian(width - 1),
+      ...uint24LittleEndian(height - 1),
+    ]);
+  }
+
+  function webpVp8Bytes(width: number, height: number) {
+    return new Uint8Array([
+      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
+      86, 80, 56, 32, 10, 0, 0, 0, 0, 0, 0,
+      0x9d, 0x01, 0x2a,
+      ...uint16LittleEndian(width),
+      ...uint16LittleEndian(height),
+    ]);
+  }
+
+  function webpVp8lBytes(width: number, height: number) {
+    const dimensions = (width - 1) | ((height - 1) << 14);
+    return new Uint8Array([
+      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
+      86, 80, 56, 76, 5, 0, 0, 0, 0x2f,
+      dimensions & 0xff,
+      (dimensions >>> 8) & 0xff,
+      (dimensions >>> 16) & 0xff,
+      (dimensions >>> 24) & 0xff,
+    ]);
+  }
+
+  function uint16BigEndian(value: number) {
+    return [(value >>> 8) & 0xff, value & 0xff];
+  }
+
+  function uint16LittleEndian(value: number) {
+    return [value & 0xff, (value >>> 8) & 0xff];
+  }
+
+  function uint24LittleEndian(value: number) {
+    return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff];
+  }
+
+  function uint32BigEndian(value: number) {
+    return [(value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff];
+  }
+
+  function bytesToBase64(bytes: Uint8Array) {
+    return btoa(String.fromCharCode(...bytes));
   }
 });
 
@@ -321,7 +498,7 @@ describe("local AI settings persistence", () => {
   it("round-trips exactly the approved LocalAISettings fields", async () => {
     const settings = {
       ...localAISettings("vision"),
-      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+      confirmedPrivateLANEndpoint: null,
       apiKey: "must-not-persist",
       token: "must-not-persist",
       auth: "must-not-persist",
@@ -336,7 +513,7 @@ describe("local AI settings persistence", () => {
       endpoint: "http://127.0.0.1:8000",
       model: "local-korean-model",
       capability: "vision",
-      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+      confirmedPrivateLANEndpoint: null,
     });
     expect(localStorage.getItem(localStorage.key(0) ?? "")).not.toMatch(
       /apiKey|token|auth|secret/i,
@@ -346,6 +523,56 @@ describe("local AI settings persistence", () => {
   it("removes the persisted Local AI settings", async () => {
     await saveLocalAISettings(localAISettings());
     await clearLocalAISettings();
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+  });
+
+  it.each([
+    ["http://user:password@127.0.0.1:8000", null],
+    ["http://8.8.8.8:8000", null],
+    ["http://127.0.0.1:8000?token=secret", null],
+    ["http://127.0.0.1:8000#fragment", null],
+    ["http://192.168.0.20:8000", null],
+    ["http://192.168.0.20:8000", "http://192.168.0.21:8000"],
+  ] as const)(
+    "refuses unsafe settings endpoint %s without writing storage",
+    async (endpoint, confirmedPrivateLANEndpoint) => {
+      const setSetting = vi.spyOn(nativePreferences, "setSetting");
+
+      await expect(
+        saveLocalAISettings({
+          ...localAISettings(),
+          endpoint,
+          confirmedPrivateLANEndpoint,
+        }),
+      ).rejects.toThrow(/invalid/i);
+      expect(setSetting).not.toHaveBeenCalled();
+      setSetting.mockRestore();
+    },
+  );
+
+  it("stores loopback settings with no private-LAN confirmation", async () => {
+    await saveLocalAISettings({
+      ...localAISettings(),
+      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+    });
+
+    await expect(loadLocalAISettings()).resolves.toEqual(localAISettings());
+  });
+
+  it("returns null for malformed or unsafe stored settings", async () => {
+    await saveLocalAISettings(localAISettings());
+    const key = localStorage.key(0);
+    if (!key) {
+      throw new Error("Local AI settings key was not persisted");
+    }
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...localAISettings(),
+        endpoint: "http://8.8.8.8:8000",
+      }),
+    );
 
     await expect(loadLocalAISettings()).resolves.toBeNull();
   });

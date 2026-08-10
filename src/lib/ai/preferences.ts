@@ -1,12 +1,13 @@
 import type { LocalAICapability, LocalAISettings, LocalAIVendor } from "./contracts";
-import { getSetting, removeSetting, setSetting } from "@/lib/native/preferences";
+import { validateLocalAIEndpoint } from "./endpoint-policy";
+import * as nativePreferences from "@/lib/native/preferences";
 
 const LOCAL_AI_SETTINGS_KEY = "paso.local-ai.settings";
 const VENDORS: readonly LocalAIVendor[] = ["naver", "kakao", "lg", "skt"];
 const CAPABILITIES: readonly LocalAICapability[] = ["text", "vision"];
 
 export async function loadLocalAISettings(): Promise<LocalAISettings | null> {
-  const stored = await getSetting(LOCAL_AI_SETTINGS_KEY);
+  const stored = await nativePreferences.getSetting(LOCAL_AI_SETTINGS_KEY);
   if (!stored) {
     return null;
   }
@@ -24,11 +25,11 @@ export async function saveLocalAISettings(settings: LocalAISettings): Promise<vo
     throw new Error("Local AI settings are invalid.");
   }
 
-  await setSetting(LOCAL_AI_SETTINGS_KEY, JSON.stringify(approvedSettings));
+  await nativePreferences.setSetting(LOCAL_AI_SETTINGS_KEY, JSON.stringify(approvedSettings));
 }
 
 export async function clearLocalAISettings(): Promise<void> {
-  await removeSetting(LOCAL_AI_SETTINGS_KEY);
+  await nativePreferences.removeSetting(LOCAL_AI_SETTINGS_KEY);
 }
 
 function toLocalAISettings(value: unknown): LocalAISettings | null {
@@ -49,12 +50,23 @@ function toLocalAISettings(value: unknown): LocalAISettings | null {
     return null;
   }
 
+  const endpointValidation = validateLocalAIEndpoint(
+    candidate.endpoint,
+    candidate.confirmedPrivateLANEndpoint,
+  );
+  if (!endpointValidation.ok) {
+    return null;
+  }
+
   return {
     enabled: candidate.enabled,
     vendor: candidate.vendor as LocalAIVendor,
     endpoint: candidate.endpoint,
     model: candidate.model,
     capability: candidate.capability as LocalAICapability,
-    confirmedPrivateLANEndpoint: candidate.confirmedPrivateLANEndpoint,
+    confirmedPrivateLANEndpoint:
+      endpointValidation.scope === "private_lan"
+        ? candidate.confirmedPrivateLANEndpoint
+        : null,
   };
 }
