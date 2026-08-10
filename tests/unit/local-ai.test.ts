@@ -1,5 +1,10 @@
 import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
+import { buildLocalAIRequest } from "@/lib/ai/context-builder";
+import { validateLocalAIDraft } from "@/lib/ai/draft-validator";
 import { LOCAL_AI_MODEL_CATALOG } from "@/lib/ai/model-catalog";
+import { createOpenAICompatibleAssistant } from "@/lib/ai/openai-compatible";
+import * as endpointPolicy from "@/lib/ai/endpoint-policy";
+import type { LocalAISettings } from "@/lib/ai/contracts";
 
 describe("local AI model catalog", () => {
   it("offers the four supported Korean vendor families with secure model-card links", () => {
@@ -109,5 +114,336 @@ describe("local AI endpoint policy", () => {
     "http://192.169.0.0:8000",
   ])("does not mistake a public IPv4 endpoint for private %s", (endpoint) => {
     expect(validateLocalAIEndpoint(endpoint, endpoint)).toMatchObject({ ok: false });
+  });
+});
+
+describe("local AI request boundary", () => {
+  it("builds a minimal JSON-only request without hidden journal metadata", () => {
+    const request = buildLocalAIRequest({
+      intent: "journal_draft",
+      placeName: "천지연폭포",
+      note: "물소리가 시원했다",
+      imageDataUrl: null,
+    });
+
+    expect(JSON.stringify(request)).not.toMatch(
+      /latitude|longitude|photoId|exif|backup/i,
+    );
+    expect(request.systemPrompt).toMatch(/one JSON object/i);
+    expect(request.systemPrompt).toMatch(/observations/i);
+    expect(request.systemPrompt).toMatch(/interpretations/i);
+    expect(request.systemPrompt).toMatch(/person.*place.*date/i);
+    expect(request.input).toEqual({
+      intent: "journal_draft",
+      placeName: "천지연폭포",
+      note: "물소리가 시원했다",
+    });
+  });
+});
+
+describe("local AI draft validation", () => {
+  it("normalizes supported draft fields and drops unknown response keys", () => {
+    expect(
+      validateLocalAIDraft({
+        title: "  기록  ",
+        body: "  본문\n\n  ",
+        category: "nature",
+        keywords: [" 산책 ", "산책", "바람"],
+        mood: "  평온함 ",
+        altText: "  물가의 나무  ",
+        observations: ["  물소리가 들린다  "],
+        privateNote: "must not escape",
+      }),
+    ).toEqual({
+      title: "기록",
+      body: "본문",
+      category: "nature",
+      keywords: ["산책", "바람"],
+      mood: "평온함",
+      altText: "물가의 나무",
+      observations: ["물소리가 들린다"],
+    });
+  });
+
+  it("clamps long fields and filters an unknown category", () => {
+    const validated = validateLocalAIDraft({
+      title: "가".repeat(81),
+      body: "나".repeat(1001),
+      category: "invented_category",
+      keywords: Array.from({ length: 10 }, (_, index) => `키워드${index}`.padEnd(30, "x")),
+      mood: "다".repeat(25),
+      altText: "라".repeat(241),
+      observations: Array.from(
+        { length: 6 },
+        (_, index) => `${index}${"마".repeat(121)}`,
+      ),
+    });
+
+    expect(validated).toMatchObject({
+      title: "가".repeat(80),
+      body: "나".repeat(1000),
+      category: null,
+      mood: "다".repeat(24),
+      altText: "라".repeat(240),
+    });
+    expect(validated?.keywords).toHaveLength(8);
+    expect(validated?.keywords.every((keyword) => keyword.length === 24)).toBe(true);
+    expect(validated?.observations).toHaveLength(5);
+    expect(
+      validated?.observations.every((observation) => observation.length === 120),
+    ).toBe(true);
+  });
+
+  it("rejects a response that is not an object", () => {
+    expect(validateLocalAIDraft("not a draft")).toBeNull();
+  });
+
+  it("rejects an object without the required draft fields", () => {
+    expect(validateLocalAIDraft({ privateNote: "not a draft" })).toBeNull();
+    expect(
+      validateLocalAIDraft({ title: "기록", body: "본문", keywords: "not an array" }),
+    ).toBeNull();
+  });
+});
+
+const localAISettings = (
+  capability: LocalAISettings["capability"] = "text",
+): LocalAISettings => ({
+  enabled: true,
+  vendor: "naver",
+  endpoint: "http://127.0.0.1:8000",
+  model: "local-korean-model",
+  capability,
+  confirmedPrivateLANEndpoint: null,
+});
+
+const jsonResponse = (value: unknown, status = 200): Response =>
+  ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: vi.fn().mockResolvedValue(value),
+    text: vi.fn().mockResolvedValue(JSON.stringify(value)),
+  }) as unknown as Response;
+
+const draftChoice = (draft = { title: "초안", body: "본문", keywords: [] }): Response =>
+  jsonResponse({ choices: [{ message: { content: JSON.stringify(draft) } }] });
+
+describe("OpenAI-compatible local assistant", () => {
+  it("posts a text-only bounded request to the validated chat endpoint", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(draftChoice());
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings("text"),
+      fetchImpl,
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: "천지연폭포",
+        note: "물소리가 시원했다",
+        imageDataUrl: "data:image/jpeg;base64,secret-photo",
+      }),
+    ).resolves.toMatchObject({ title: "초안", body: "본문" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/v1/chat/completions",
+      expect.objectContaining({ method: "POST", redirect: "error" }),
+    );
+    const requestInit = fetchImpl.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(requestInit.headers).has("authorization")).toBe(false);
+    expect(requestInit.body).not.toContain("secret-photo");
+  });
+
+  it("includes the transient image only for a vision model", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(draftChoice());
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings("vision"),
+      fetchImpl,
+    });
+
+    await assistant.generate({
+      intent: "photo_alt",
+      placeName: null,
+      note: "나무가 보인다",
+      imageDataUrl: "data:image/jpeg;base64,vision-copy",
+    });
+
+    expect(fetchImpl.mock.calls[0]?.[1]).toMatchObject({
+      body: expect.stringContaining("vision-copy"),
+    });
+  });
+
+  it("revalidates endpoint policy immediately before fetch", async () => {
+    const order: string[] = [];
+    const original = endpointPolicy.validateLocalAIEndpoint;
+    const policySpy = vi
+      .spyOn(endpointPolicy, "validateLocalAIEndpoint")
+      .mockImplementation((...args) => {
+        order.push("validate");
+        return original(...args);
+      });
+    const fetchImpl = vi.fn().mockImplementation(() => {
+      order.push("fetch");
+      return Promise.resolve(draftChoice());
+    });
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+    });
+
+    await assistant.generate({
+      intent: "classify_keywords",
+      placeName: null,
+      note: "산책",
+      imageDataUrl: null,
+    });
+
+    expect(order).toEqual(["validate", "fetch"]);
+    policySpy.mockRestore();
+  });
+
+  it("uses a content-free chat request when testing the configured model", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(draftChoice());
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+    });
+
+    await expect(assistant.testConnection()).resolves.toEqual({
+      model: "local-korean-model",
+    });
+    expect(fetchImpl.mock.calls[0]?.[1]).toMatchObject({
+      body: expect.not.stringContaining("천지연폭포"),
+    });
+  });
+
+  it("bounds an HTTP error without exposing an unlimited remote body", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse("x".repeat(2_000), 500));
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.not.toThrow(/x{513}/);
+  });
+
+  it("rejects an empty choice list", async () => {
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl: vi.fn().mockResolvedValue(jsonResponse({ choices: [] })),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/choice/i);
+  });
+
+  it("rejects invalid JSON returned by the runtime", async () => {
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl: vi.fn().mockResolvedValue(
+        jsonResponse({ choices: [{ message: { content: "not-json" } }] }),
+      ),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/JSON/i);
+  });
+
+  it("rejects an oversized response body before processing ignored fields", async () => {
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl: vi.fn().mockResolvedValue(
+        jsonResponse({
+          choices: [{ message: { content: JSON.stringify({ title: "초안", body: "본문" }) } }],
+          ignored: "x".repeat(50_000),
+        }),
+      ),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/too large/i);
+  });
+
+  it("aborts a stalled request at the configured timeout", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+      timeoutMs: 25,
+    });
+
+    const pending = assistant.generate({
+      intent: "journal_draft",
+      placeName: null,
+      note: "기록",
+      imageDataUrl: null,
+    });
+    const timeoutExpectation = expect(pending).rejects.toThrow(/timed out/i);
+    await vi.advanceTimersByTimeAsync(25);
+
+    await timeoutExpectation;
+    vi.useRealTimers();
+  });
+
+  it("preserves caller cancellation rather than replacing it with a timeout", async () => {
+    const caller = new AbortController();
+    const cancellation = new Error("caller cancelled");
+    const fetchImpl = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl,
+      timeoutMs: 5_000,
+    });
+
+    const pending = assistant.generate(
+      {
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      },
+      caller.signal,
+    );
+    caller.abort(cancellation);
+
+    await expect(pending).rejects.toBe(cancellation);
   });
 });
