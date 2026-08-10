@@ -3,9 +3,13 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { LocalAIAssistantSheet } from "@/components/ai/LocalAIAssistantSheet";
 import { getPOIMarkerColor } from "@/components/map/POIMarker";
 import { StarRating } from "@/components/ui/StarRating";
+import { useLocalAssistant } from "@/hooks/useLocalAssistant";
 import type { PasoJournalController } from "@/hooks/usePasoJournal";
+import type { LocalAIDraft } from "@/lib/ai/contracts";
+import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
 import { getCurrentPosition, requestPermissions, type GPSPosition } from "@/lib/geo/gps-tracker";
 import { haversineDistance } from "@/lib/geo/haversine";
 import { buildJournalTimeline, findOnThisDayMemory } from "@/lib/journal/timeline";
@@ -37,6 +41,16 @@ const moods = [
   { id: "calm", label: "평온", color: "#22c55e" },
   { id: "energized", label: "활력", color: "#f59e0b" },
 ];
+
+const categoryLabels = {
+  cultural_heritage: "문화유산",
+  historic_site: "역사 장소",
+  tourist_attraction: "관광 명소",
+  nature: "자연",
+  food: "음식",
+  community: "지역 공간",
+  custom: "직접 분류",
+};
 
 function createDraftId() {
   return `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -107,6 +121,12 @@ export function JournalTab({
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([]);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantTarget, setAssistantTarget] = useState<"memo" | "review">("memo");
+  const [activeEditor, setActiveEditor] = useState<"memo" | "review">("memo");
+  const [pendingKeywords, setPendingKeywords] = useState<string[]>([]);
+  const [suggestedCategory, setSuggestedCategory] = useState<LocalAIDraft["category"]>(null);
+  const [suggestedAltText, setSuggestedAltText] = useState("");
   const [capturePending, setCapturePending] = useState(false);
   const [locationCheck, setLocationCheck] = useState<LocationCheck>({
     status: "idle",
@@ -116,6 +136,17 @@ export function JournalTab({
   const [visitPending, startVisitTransition] = useTransition();
   const [reviewPending, startReviewTransition] = useTransition();
   const reviewSectionRef = useRef<HTMLDivElement>(null);
+  const assistant = useLocalAssistant();
+
+  const currentAssistantSettings = assistant.settings?.enabled
+    ? validateLocalAIEndpoint(
+        assistant.settings.endpoint,
+        assistant.settings.confirmedPrivateLANEndpoint,
+      )
+    : null;
+  const validAssistantSettings = currentAssistantSettings?.ok
+    ? assistant.settings
+    : null;
 
   const timeline = buildJournalTimeline(recentVisits, recentReviews);
   const anniversaryMemory = findOnThisDayMemory(recentVisits, now);
@@ -188,6 +219,7 @@ export function JournalTab({
     startVisitTransition(() => {
       void (async () => {
         const committedPhotoIds: string[] = [];
+        let visitPersisted = false;
         try {
           for (const photo of draftPhotos) {
             const committed = await saveJournalPhoto(photo.dataUrl);
@@ -211,19 +243,54 @@ export function JournalTab({
             photoIds: committedPhotoIds,
             verificationMode: verifiedPosition ? "gps" : "manual",
           });
+          visitPersisted = true;
+          if (pendingKeywords.length > 0) {
+            const mergedTags = Array.from(
+              new Set([
+                ...selectedPoi.tags,
+                ...pendingKeywords.map((keyword) => keyword.trim()).filter(Boolean),
+              ]),
+            );
+            await model.updatePoiTags(selectedPoi.id, mergedTags);
+          }
           setMemo("");
           setDraftPhotos([]);
+          setPendingKeywords([]);
+          setSuggestedCategory(null);
+          setSuggestedAltText("");
           setLocationCheck({ status: "idle", distance: null, position: null });
           onToast(`${selectedPoi.name} 방문을 기록했어요. +${visit.xp_earned} XP`, "success");
           reviewSectionRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch (error) {
-          await Promise.allSettled(committedPhotoIds.map(deleteJournalPhoto));
+          if (!visitPersisted) {
+            await Promise.allSettled(committedPhotoIds.map(deleteJournalPhoto));
+          }
           throw error;
         }
       })().catch((error: unknown) => {
         onToast(error instanceof Error ? error.message : "방문 기록에 실패했어요.", "error");
       });
     });
+  };
+
+  const handleApplyAssistantDraft = (draft: LocalAIDraft) => {
+    const foldedText = [draft.title.trim(), draft.body.trim()].filter(Boolean).join("\n\n");
+    if (foldedText) {
+      if (assistantTarget === "review") {
+        setReviewText(foldedText);
+      } else {
+        setMemo(foldedText);
+      }
+    }
+    const mappedMood = draft.mood
+      ? moods.find((item) => item.id === draft.mood || item.label === draft.mood)
+      : null;
+    if (mappedMood) {
+      setMood(mappedMood.id);
+    }
+    setPendingKeywords(draft.keywords);
+    setSuggestedCategory(draft.category);
+    setSuggestedAltText(draft.altText.trim());
   };
 
   const handleSaveReview = () => {
@@ -285,6 +352,7 @@ export function JournalTab({
             aria-label="방문 메모"
             value={memo}
             onChange={(event) => setMemo(event.target.value)}
+            onFocus={() => setActiveEditor("memo")}
             rows={3}
             maxLength={500}
             placeholder="그곳에서 눈에 들어온 것, 함께한 사람, 지금의 기분을 적어보세요."
@@ -338,6 +406,32 @@ export function JournalTab({
             </div>
           ) : null}
 
+          {validAssistantSettings ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAssistantTarget(activeEditor);
+                setAssistantOpen(true);
+              }}
+              disabled={isBusy}
+              className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-black outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-40"
+              style={{ borderColor: "color-mix(in srgb, var(--accent) 55%, var(--border))", backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
+            >
+              <span aria-hidden="true" className="text-base">✦</span>
+              AI로 빠르게 작성
+            </button>
+          ) : null}
+
+          {(suggestedCategory || suggestedAltText || pendingKeywords.length > 0) ? (
+            <aside className="mt-3 rounded-xl border px-3 py-3 text-xs leading-relaxed" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
+              <p className="font-black" style={{ color: "var(--text-primary)" }}>AI 제안 · 저장 전</p>
+              {suggestedCategory ? <p className="mt-1">제안 분류: {categoryLabels[suggestedCategory]}</p> : null}
+              {suggestedAltText ? <p className="mt-1">사진 설명 제안: {suggestedAltText}</p> : null}
+              {pendingKeywords.length > 0 ? <p className="mt-1">저장 대기 키워드: {pendingKeywords.join(" · ")}</p> : null}
+              <p className="mt-2 text-[11px]" style={{ color: "var(--text-tertiary)" }}>분류와 사진 설명은 참고용이며, 키워드는 방문 기록이 성공한 뒤에만 장소 태그에 합쳐집니다.</p>
+            </aside>
+          ) : null}
+
           <div className="mt-4 grid grid-cols-[0.85fr_1.15fr] gap-2">
             <button type="button" onClick={() => void handleAddPhoto()} disabled={isBusy || !model.canPersist || draftPhotos.length >= 4} className="flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-black disabled:opacity-40" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none"><path d="M4 7.5h3l1.4-2h7.2l1.4 2h3v11H4v-11Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="12" cy="13" r="3" stroke="currentColor" strokeWidth="1.7"/></svg>
@@ -362,7 +456,7 @@ export function JournalTab({
             <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>기기에만 저장</span>
           </div>
           <div className="mt-3"><StarRating value={rating} onChange={setRating} /></div>
-          <textarea aria-label="방문 감상" value={reviewText} onChange={(event) => setReviewText(event.target.value)} rows={3} maxLength={1000} placeholder="다시 찾고 싶은 이유나 다음의 나에게 남길 말을 적어보세요." className="mt-3 w-full resize-none rounded-xl border px-4 py-3 text-sm leading-relaxed outline-none" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+          <textarea aria-label="방문 감상" value={reviewText} onChange={(event) => setReviewText(event.target.value)} onFocus={() => setActiveEditor("review")} rows={3} maxLength={1000} placeholder="다시 찾고 싶은 이유나 다음의 나에게 남길 말을 적어보세요." className="mt-3 w-full resize-none rounded-xl border px-4 py-3 text-sm leading-relaxed outline-none" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
           <button type="button" onClick={handleSaveReview} disabled={isBusy || !reviewText.trim() || !model.canPersist} className="mt-3 w-full rounded-xl border py-3 text-sm font-black disabled:opacity-40" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" }}>
             {reviewPending ? "저장 중..." : "감상 저장"}
           </button>
@@ -422,6 +516,22 @@ export function JournalTab({
           </div>
         )}
       </section>
+
+      {assistantOpen && validAssistantSettings ? (
+        <LocalAIAssistantSheet
+          open
+          placeName={selectedPoi?.name ?? null}
+          note={assistantTarget === "review" ? reviewText : memo}
+          photoDataUrl={draftPhotos[0]?.dataUrl ?? null}
+          settings={validAssistantSettings}
+          loading={assistant.loading}
+          error={assistant.error}
+          onGenerate={assistant.generate}
+          onCancel={assistant.cancel}
+          onClose={() => setAssistantOpen(false)}
+          onApply={handleApplyAssistantDraft}
+        />
+      ) : null}
     </div>
   );
 }

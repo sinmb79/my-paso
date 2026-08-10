@@ -1,9 +1,19 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 
+import { LocalAIAssistantSheet } from "@/components/ai/LocalAIAssistantSheet";
 import { LocalAISettings } from "@/components/ai/LocalAISettings";
+import type { LocalAIDraft, LocalAISettings as LocalAISettingsValue } from "@/lib/ai/contracts";
 import { loadLocalAISettings, saveLocalAISettings } from "@/lib/ai/preferences";
 import * as localAIPreferences from "@/lib/ai/preferences";
 import { useLocalAssistant } from "@/hooks/useLocalAssistant";
+
+const assistantSheetMocks = vi.hoisted(() => ({
+  sanitizePhotoForLocalAI: vi.fn().mockResolvedValue("data:image/jpeg;base64,c2FuaXRpemVk"),
+}));
+
+vi.mock("@/lib/ai/photo-sanitizer", () => ({
+  sanitizePhotoForLocalAI: assistantSheetMocks.sanitizePhotoForLocalAI,
+}));
 
 const connectionResponse = () =>
   new Response(
@@ -28,6 +38,237 @@ const savedSettings = (model = "local-korean-model") => ({
   model,
   capability: "text" as const,
   confirmedPrivateLANEndpoint: null,
+});
+
+const visionSettings: LocalAISettingsValue = {
+  ...savedSettings(),
+  capability: "vision",
+};
+
+const generatedDraft: LocalAIDraft = {
+  title: "돌담의 오후",
+  body: "고요한 길을 천천히 걸었다.",
+  category: "historic_site",
+  keywords: ["돌담", "산책"],
+  mood: "평온",
+  altText: "오래된 돌담 옆으로 난 산책길",
+  observations: ["회색 돌담이 보임", "나무 그림자가 길게 드리움"],
+};
+
+describe("LocalAIAssistantSheet", () => {
+  beforeEach(() => {
+    assistantSheetMocks.sanitizePhotoForLocalAI.mockClear();
+  });
+
+  it("shows the exact payload and privacy boundary before an explicit generation confirmation", async () => {
+    const onGenerate = vi.fn().mockResolvedValue(generatedDraft);
+
+    render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="돌담을 천천히 걸었다."
+        photoDataUrl="data:image/jpeg;base64,b3JpZ2luYWw="
+        settings={visionSettings}
+        loading={false}
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={vi.fn()}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "로컬 AI 기록 도우미" })).toHaveAttribute(
+      "aria-modal",
+      "true",
+    );
+    expect(
+      Number(getComputedStyle(screen.getByRole("dialog").parentElement!).zIndex),
+    ).toBeGreaterThan(50);
+    expect(screen.getByRole("button", { name: "닫기" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "취소" })).toBeInTheDocument();
+    expect(screen.getByText("고요한 궁궐")).toBeInTheDocument();
+    expect(screen.getByText("돌담을 천천히 걸었다.")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "AI 전송 사진 미리보기" })).toHaveAttribute(
+      "src",
+      "data:image/jpeg;base64,b3JpZ2luYWw=",
+    );
+    expect(screen.getByText("http://127.0.0.1:8000")).toBeInTheDocument();
+    expect(screen.getByText(/이 기기 또는 브라우저의 localhost/)).toBeInTheDocument();
+    expect(screen.getByText(/엔드포인트 운영자가 전송 내용을 볼 수 있어요/)).toBeInTheDocument();
+    expect(screen.getByText(/EXIF를 제거한 임시 복사본만 전송/)).toBeInTheDocument();
+    for (const excluded of ["정확한 위치", "사진 메타데이터", "다른 기록", "백업 데이터"]) {
+      expect(screen.getByText(excluded)).toBeInTheDocument();
+    }
+    expect(screen.getByRole("radio", { name: "기록 초안" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "분류와 키워드" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "사진 설명" })).toBeInTheDocument();
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(assistantSheetMocks.sanitizePhotoForLocalAI).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+
+    await waitFor(() =>
+      expect(onGenerate).toHaveBeenCalledWith({
+        intent: "journal_draft",
+        placeName: "고요한 궁궐",
+        note: "돌담을 천천히 걸었다.",
+        imageDataUrl: expect.stringMatching(/^data:image\/(jpeg|webp);base64,/),
+      }),
+    );
+    expect(assistantSheetMocks.sanitizePhotoForLocalAI).toHaveBeenCalledWith(
+      "data:image/jpeg;base64,b3JpZ2luYWw=",
+    );
+  });
+
+  it("visibly excludes a selected photo from a text-only request", async () => {
+    const onGenerate = vi.fn().mockResolvedValue(generatedDraft);
+
+    render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="텍스트 메모"
+        photoDataUrl="data:image/jpeg;base64,b3JpZ2luYWw="
+        settings={savedSettings()}
+        loading={false}
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={vi.fn()}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/텍스트 전용 모델이라 사진은 전송하지 않습니다/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+
+    await waitFor(() =>
+      expect(onGenerate).toHaveBeenCalledWith(
+        expect.objectContaining({ imageDataUrl: null }),
+      ),
+    );
+    expect(assistantSheetMocks.sanitizePhotoForLocalAI).not.toHaveBeenCalled();
+  });
+
+  it("does not start a request when the user cancels during transient photo sanitization", async () => {
+    const sanitizing = deferred<string>();
+    assistantSheetMocks.sanitizePhotoForLocalAI.mockReturnValueOnce(sanitizing.promise);
+    const onGenerate = vi.fn().mockResolvedValue(generatedDraft);
+    const onClose = vi.fn();
+
+    render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="취소해도 남는 메모"
+        photoDataUrl="data:image/jpeg;base64,b3JpZ2luYWw="
+        settings={visionSettings}
+        loading={false}
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={vi.fn()}
+        onClose={onClose}
+        onApply={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+    await waitFor(() => expect(assistantSheetMocks.sanitizePhotoForLocalAI).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    sanitizing.resolve("data:image/jpeg;base64,c2FuaXRpemVk");
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
+
+  it("supports loading cancellation and an in-place retry without losing the preview", () => {
+    const onCancel = vi.fn();
+    const onGenerate = vi.fn();
+    const { rerender } = render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="남아 있어야 할 메모"
+        photoDataUrl={null}
+        settings={visionSettings}
+        loading
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={onCancel}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("초안을 만드는 중이에요")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "생성 취소" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="남아 있어야 할 메모"
+        photoDataUrl={null}
+        settings={visionSettings}
+        loading={false}
+        error="모델에 연결할 수 없습니다."
+        onGenerate={onGenerate}
+        onCancel={onCancel}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("모델에 연결할 수 없습니다.");
+    expect(screen.getByText("남아 있어야 할 메모")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(onGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({ note: "남아 있어야 할 메모" }),
+    );
+  });
+
+  it("lets every returned field be edited or selected before applying", async () => {
+    const onApply = vi.fn();
+    render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="메모"
+        photoDataUrl={null}
+        settings={visionSettings}
+        loading={false}
+        error={null}
+        onGenerate={vi.fn().mockResolvedValue(generatedDraft)}
+        onCancel={vi.fn()}
+        onClose={vi.fn()}
+        onApply={onApply}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+    expect(await screen.findByDisplayValue("돌담의 오후")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("AI 제안 제목"), { target: { value: "수정한 제목" } });
+    fireEvent.change(screen.getByLabelText("AI 제안 본문"), { target: { value: "수정한 본문" } });
+    fireEvent.change(screen.getByLabelText("AI 제안 장소 분류"), { target: { value: "nature" } });
+    fireEvent.change(screen.getByLabelText("AI 제안 기분"), { target: { value: "활력" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "키워드 산책 포함" }));
+    fireEvent.change(screen.getByLabelText("AI 제안 사진 설명"), { target: { value: "수정한 설명" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "관찰 2 포함" }));
+    fireEvent.click(screen.getByRole("button", { name: "초안 적용" }));
+
+    expect(onApply).toHaveBeenCalledWith({
+      title: "수정한 제목",
+      body: "수정한 본문",
+      category: "nature",
+      keywords: ["돌담"],
+      mood: "활력",
+      altText: "수정한 설명",
+      observations: ["회색 돌담이 보임"],
+    });
+  });
 });
 
 describe("LocalAISettings", () => {
