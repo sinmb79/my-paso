@@ -134,6 +134,10 @@ describe("local AI request boundary", () => {
     expect(request.systemPrompt).toMatch(/관찰.*해석.*분리/);
     expect(request.systemPrompt).toMatch(/인물.*장소.*날짜.*이유.*사실/);
     expect(request.systemPrompt).toMatch(/제공.*입력.*만들어.*주장/);
+    expect(request.systemPrompt).toMatch(/시각.*입력.*직접.*보이는.*비식별.*관찰/);
+    expect(request.systemPrompt).toMatch(/장소.*인물.*날짜.*시간.*소유.*관계.*이유.*역사.*사실/);
+    expect(request.systemPrompt).toMatch(/placeName.*note.*제공.*텍스트/);
+    expect(request.systemPrompt).toMatch(/사진.*단독.*추론.*주장.*마세요/);
     expect(request.input).toEqual({
       intent: "journal_draft",
       placeName: "천지연폭포",
