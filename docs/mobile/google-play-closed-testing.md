@@ -2,11 +2,11 @@
 
 기준일: 2026-08-11
 앱 ID: com.mypaso.app
-현재 게시 버전: 0.2.0 (versionCode 4)
-현재 출시명: 0.2.0-alpha3
-검토 중 업데이트: 0.2.0 (versionCode 5, 2026-07-30 제출)
-검토 중 출시명: 0.2.0-alpha4
-다음 후보: 0.3.0 (versionCode 6 예정, 업로드 전 Console에서 미사용 여부 재확인)
+현재 게시 버전: 0.2.0-alpha4 (versionCode 5)
+현재 출시명: 0.2.0-alpha4
+검토 중 업데이트: 0.3.0 (versionCode 6, 2026-08-11 제출)
+검토 중 출시명: 0.3.0-alpha1
+현재 상태: `검토 중인 변경사항`, 빠른 검사 실행 중
 
 ## 공식 요건 확인
 
@@ -54,11 +54,11 @@ PowerShell에서 다시 만들 때:
     C:\Users\sinmb\key\my-paso-upload.keystore
     C:\Users\sinmb\key\my-paso-upload.properties
 
-다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없습니다. versionCode 5가 이미 제출됐으므로 0.3.0 후보는 Console에서 미사용을 재확인한 versionCode 6을 사용합니다.
+다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없습니다. versionCode 6은 Console 미사용을 확인한 뒤 2026-08-11 `0.3.0-alpha1`으로 제출했습니다.
 
-실제 POI 교체판은 versionCode 4로 빌드·서명됐고 현재 Alpha에 게시됐습니다.
+실제 POI 교체판은 versionCode 4로 빌드·서명된 역사 릴리스입니다. 현재 Alpha 게시본은 versionCode 5 `0.2.0-alpha4`입니다.
 
-| 항목 | versionCode 4 현재 게시본 |
+| 항목 | versionCode 4 역사 게시본 |
 |---|---|
 | AAB 크기 | 7,019,128 bytes |
 | AAB SHA-256 | FEE02729F0029B3778351662A653C8B428F70F68897AA771E136580CAA7E8A71 |
@@ -78,9 +78,21 @@ PowerShell에서 다시 만들 때:
 | Bundletool / jarsigner | 통과 |
 | Play 상태 | 검토 중인 변경사항, 승인 후 자동 출시 |
 
+2026-08-11 제출된 0.3.0-alpha1/versionCode 6:
+
+| 항목 | versionCode 6 제출본 |
+|---|---|
+| 출시명 | `0.3.0-alpha1` |
+| versionName / SDK | `0.3.0`, min API 24 / target SDK 36 |
+| AAB 크기 | 8,277,246 bytes |
+| AAB SHA-256 | `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679` |
+| Play 배포 추정 | 신규 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0 |
+| Play 상태 | `검토 중인 변경사항`, 빠른 검사 실행 중 |
+| 비차단 경고 | R8/Proguard mapping 부재, native debug symbols 부재 |
+
 ## 2. 앱 콘텐츠와 데이터 보안
 
-0.3.0은 선택적 로컬 AI를 추가합니다. localhost는 같은 기기 안의 loopback이지만, 사설망 주소로 보내는 선택한 장소 이름·메모와 EXIF 제거 임시 사진은 기기 밖 전송이므로 Play Data safety의 수집 범위에 포함합니다.
+0.3.0-alpha1은 선택적 로컬 AI를 추가합니다. localhost는 같은 기기 안의 loopback이지만, 사설망 주소로 보내는 선택한 장소 이름·메모와 EXIF 제거 임시 사진은 기기 밖 전송이므로 Play Data safety의 수집 범위에 포함합니다.
 
 | Play Console 항목 | 0.3.0 작업 답변 |
 |---|---|
@@ -88,7 +100,7 @@ PowerShell에서 다시 만들 때:
 | 광고 | 없음 |
 | 타겟층 | 비공개 테스트는 만 18세 이상 |
 | 데이터 수집 | 사설망 AI 모드에서 `Yes`; `Photos`, `Other user-generated content`, 선택 사항, 앱 기능 |
-| 데이터 공유 | 소유자 관리 엔드포인트로 사용자가 직접 보내는 현재 전제에서는 `No` 후보. 제출 직전 실제 엔드포인트 운영·법적 소유 흐름에 따라 재확인 |
+| 데이터 공유 | `No` — 사용자가 자신이 관리하는 엔드포인트로 직접 전송하는 제출 흐름 |
 | 전송 중 암호화 | 기기 밖 수집은 HTTPS 사설망과 플랫폼 TLS만 사용하므로 `Yes`; HTTP localhost는 기기 안 처리 |
 | 계정 삭제 | 계정 기능 없음 |
 | 정부·금융·건강 앱 | 해당 없음 |
@@ -119,24 +131,21 @@ store-assets/store-listing.txt의 국문을 기본 등록정보에 입력하고 
 
 ## 4. 비공개 테스트 버전 업데이트
 
-0.2.0-alpha3 versionCode 4는 현재 Alpha에 100% 게시됐습니다. Android 15·16 보완판인 0.2.0-alpha4 versionCode 5는 2026-07-30 같은 Alpha 트랙에 제출됐고 현재 `검토 중인 변경사항` 상태입니다. 관리형 게시를 사용하지 않으므로 승인되면 자동 출시됩니다.
+0.2.0-alpha4 versionCode 5는 현재 Alpha에 게시됐습니다. 0.3.0-alpha1 versionCode 6은 2026-08-11 같은 Alpha 트랙에 제출됐고 현재 `검토 중인 변경사항`이며 빠른 검사가 실행 중입니다. 관리형 게시를 사용하지 않으므로 승인되면 자동 출시됩니다.
 
-1. 완료: Play Console의 비공개 테스트 Alpha 트랙과 대한민국 대상 국가 1개를 확인했습니다.
-2. 완료: versionCode 5 `app-release.aab`를 업로드했습니다.
-3. 완료: 출시명을 `0.2.0-alpha4`로 지정했습니다.
-4. 완료: `closed-test/release-notes-ko.txt`와 `release-notes-en.txt`를 입력하고 2개 언어 제공을 확인했습니다.
-5. 완료: 자동 검사를 통과하고 권한·데이터 보안과 기기 지원 변화를 검토했습니다.
-6. 완료: 100% 출시 변경사항 1건을 Google 검토에 전송했습니다.
-7. 남음: versionCode 5 검토 승인 후 Alpha 자동 게시와 테스터 배포 상태를 확인합니다.
+1. 완료: Play Console의 비공개 테스트 Alpha 트랙을 확인하고 versionCode 6 `app-release.aab`를 업로드했습니다.
+2. 완료: 출시명을 `0.3.0-alpha1`로 지정하고 13개 변경사항을 Google 검토에 전송했습니다.
+3. 완료: 국·영문 등록정보, 개인정보처리방침 URL, Data safety와 휴대전화·7인치·10인치 스크린샷을 전송했습니다.
+4. 완료: 새 휴대전화 4장과 수정된 태블릿 화면은 AI-generated/modified 라벨로 제출했습니다. 기존 아이콘·feature graphic·이전 스크린샷은 라벨 대상이 아닙니다.
+5. 확인: 새 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0. R8/Proguard mapping 및 native debug symbols 부재 경고 2개는 비차단입니다.
+6. 남음: 빠른 검사와 versionCode 6 검토 승인 후 Alpha 자동 게시·테스터 배포 상태를 확인합니다.
 
-### 0.3.0 업데이트 체크
+### 0.3.0 제출 기록
 
-1. Console에서 versionCode 6이 미사용인지 확인합니다.
-2. 개인정보처리방침 URL이 0.3.0의 HTTP localhost·HTTPS 사설망 경계와 HTTP 사설망 차단을 표시하는지 확인합니다.
-3. Data safety에서 `Photos`와 `Other user-generated content`의 선택적 수집·앱 기능 목적을 입력합니다.
-4. 실제 엔드포인트 운영 관계로 공유 여부를 다시 판단하고, HTTPS 사설망만 기기 밖 수집에 쓰이는 검증 증거로 전송 중 암호화를 `Yes`로 답합니다.
-5. 0.3.0 AAB와 국·영문 릴리스 노트를 업로드한 뒤 차단 오류가 없는지 확인합니다.
-6. 기존 테스터 그룹·국가·출시 비율을 유지하고 검토 제출 상태를 증거 보고서에 기록합니다.
+1. versionCode 6 미사용을 확인하고 0.3.0 AAB를 제출했습니다.
+2. 개인정보처리방침 URL: `https://sinmb79.github.io/my-paso/privacy.html`.
+3. Data safety: `Photos`와 `Other user-generated content` 수집 Yes, 선택 사항, 앱 기능; 공유 No; 전송 중 암호화 Yes.
+4. 0.3.0-alpha1은 `검토 중인 변경사항`이며 빠른 검사가 실행 중입니다.
 
 Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역할입니다. 로컬 업로드 키와 속성 파일은 암호화된 별도 저장소에도 백업합니다.
 

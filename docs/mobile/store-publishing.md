@@ -7,14 +7,14 @@
 | 항목 | 상태 | 위치 또는 기준 |
 |---|---|---|
 | 패키지 ID | 준비 | com.mypaso.app |
-| 현재 게시 버전 | 게시 완료 | 0.2.0 / versionCode 4 |
-| 현재 출시명 | Alpha 활성 | 0.2.0-alpha3 |
-| 검토 중 업데이트 | 2026-07-30 제출·Google 검토 중 | 0.2.0 / versionCode 5 |
-| 검토 중 출시명 | Alpha 제출 완료 | 0.2.0-alpha4 |
-| 0.3.0 후보 | 로컬 검증·정책 동기화 중 | versionCode 6 예정, Console 미업로드 |
+| 현재 게시 버전 | Alpha 게시 | 0.2.0-alpha4 / versionCode 5 |
+| 현재 출시명 | Alpha 활성 | 0.2.0-alpha4 |
+| 검토 중 업데이트 | 2026-08-11 제출·빠른 검사 실행 중 | 0.3.0 / versionCode 6 |
+| 검토 중 출시명 | Alpha 제출 완료 | 0.3.0-alpha1 |
+| 0.3.0 후보 | 제출 완료·Google 검토 중 | versionCode 6, `검토 중인 변경사항` |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
-| App Bundle | v5 서명·검증·Play 업로드 완료 | android/app/build/outputs/bundle/release/app-release.aab |
-| 릴리스 APK | 직전 v4 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
+| App Bundle | v6 서명·검증·Play 업로드 완료 | 8,277,246 bytes, SHA-256 `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679` |
+| 릴리스 APK | v6 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
 | 업로드 키 | 저장소 밖으로 분리 | C:\Users\sinmb\key |
 | 런타임 권한 | 최소화 | 포그라운드 위치, 카메라 |
 | 백그라운드 위치 | 미요청 | AndroidManifest 확인 |
@@ -23,9 +23,10 @@
 | 스토어 등록정보 | 국문·영문 준비 | store-assets/store-listing.txt |
 | 이미지 | 실제 앱 화면으로 준비 | store-assets 폴더 |
 | 테스트 운영 자료 | 준비 | closed-test 폴더 |
-| Play Console alpha3 | 게시 완료 | 0.2.0-alpha3 100%, versionCode 4, Alpha 활성 |
-| Play Console alpha4 | 검토 중 | 0.2.0-alpha4 100%, versionCode 5, 2026-07-30 제출 |
-| 테스터 조건 | 재확인 필요 | 2026-07-30 Console 증거에서 현재 Alpha 사용 가능 사용자 0명 |
+| Play Console alpha4 | 게시 완료 | 0.2.0-alpha4, versionCode 5, Alpha 활성 |
+| Play Console 0.3.0-alpha1 | 검토 중 | versionCode 6, 2026-08-11 제출, `검토 중인 변경사항` |
+| Play 배포 추정 | 확인 완료 | 신규 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0 |
+| Play 경고 | 비차단 | R8/Proguard mapping 부재, native debug symbols 부재 |
 
 ## 제출된 v5 검증 — 2026-07-30
 
@@ -59,7 +60,7 @@
 
 ## Play Console 데이터 보안 기준
 
-0.3.0 후보는 AI를 사용하지 않을 때 모든 기록이 앱 전용 저장소에 남지만, 사용자가 사설망 AI를 켜고 미리보기 뒤 명시적으로 보내면 선택한 장소 이름·메모와 EXIF를 제거한 임시 사진 복사본이 기기 밖 엔드포인트로 이동합니다. Google Play의 Data safety 정의에서는 앱에서 기기 밖으로 전송되는 데이터를 `수집(collect)`으로 봅니다.
+0.3.0-alpha1 제출본은 AI를 사용하지 않을 때 모든 기록이 앱 전용 저장소에 남지만, 사용자가 사설망 AI를 켜고 미리보기 뒤 명시적으로 보내면 선택한 장소 이름·메모와 EXIF를 제거한 임시 사진 복사본이 기기 밖 엔드포인트로 이동합니다. Google Play의 Data safety 정의에서는 앱에서 기기 밖으로 전송되는 데이터를 `수집(collect)`으로 봅니다.
 
 - AI: 선택 사항. AI를 끄거나 설정하지 않아도 앱을 사용 가능
 - 허용 엔드포인트: HTTP/HTTPS localhost·loopback 또는 사용자가 정확히 확인한 HTTPS 사설망 IPv4
@@ -67,7 +68,7 @@
 - 전송 전 통제: 전송 미리보기와 별도 명시적 확인
 - 수집 데이터 유형: `Photos`, `Other user-generated content`(선택한 장소 이름·메모)
 - 수집 여부: 사설망 모드에서 `Yes`, 선택 사항, 목적은 앱 기능
-- 공유 여부: 소유자가 관리하는 엔드포인트로 사용자가 직접 전송한다는 현재 제품 전제에서는 `No` 후보. 실제 Console 제출 시 엔드포인트 운영·법적 소유 흐름을 다시 확인하고 별도 제3자 운영자라면 `Yes`로 수정
+- 공유 여부: 소유자가 관리하는 엔드포인트로 사용자가 직접 전송하는 현재 제출 흐름에서 `No`
 - 전송 중 암호화: 기기 밖 수집은 HTTPS 사설망으로만 가능하고 플랫폼 TLS를 사용하므로 `Yes`. HTTP localhost는 기기 안 처리라 수집 대상이 아님
 - AI 요청에서 제외: 정확한 위치, EXIF·사진 메타데이터, 다른 기록, 백업, API 키
 - AI 결과: 편집 가능한 초안만 반환하며 자동 저장·동기화·공유하지 않음
@@ -80,19 +81,20 @@
 
 작성 근거와 Console 입력 체크리스트는 [data-safety-0.3.0.md](./data-safety-0.3.0.md)를 사용합니다. 이는 법률 자문이 아니라 현재 앱 동작을 사실대로 옮기기 위한 작업표이며, 실제 제출 화면과 최신 정책이 최종 기준입니다.
 
-## Play Console에서 남은 절차
+## Play Console 제출 현황
 
-1. 완료: 0.2.0 (versionCode 4, `0.2.0-alpha3`)이 비공개 테스트 Alpha의 현재 게시 버전입니다.
+1. 완료: 0.2.0 (versionCode 5, `0.2.0-alpha4`)이 비공개 테스트 Alpha의 현재 게시 버전입니다.
 2. 완료: 권한, 데이터 보안, 앱 액세스, 콘텐츠 등급과 타겟층 답변을 확인했습니다.
 3. 완료: 국문·영문 등록정보와 아이콘, 그래픽, 휴대전화·태블릿 스크린샷을 등록했습니다.
 4. 완료: 0.2.0-alpha2 100% 출시안과 등록정보 변경 3건을 Google 검토에 제출했습니다.
 5. 완료: Google 승인 후 0.2.0-alpha2 Alpha 트랙 자동 게시와 활성 상태를 확인했습니다.
 6. 완료: Play 대시보드에서 12명 이상 옵트인 조건을 확인했습니다. `젤리테스터` 이메일 목록은 44명입니다.
-7. 완료: versionCode 4 실제 POI 업데이트 `0.2.0-alpha3`가 승인되어 현재 Alpha에 게시됐습니다.
-8. 완료: 2026-07-30 versionCode 5 `0.2.0-alpha4`를 100% Alpha 출시로 업로드하고 Google 검토에 제출했습니다.
-9. 남음: `0.2.0-alpha4`의 `검토 중인 변경사항`이 승인되어 자동 게시되는지 확인합니다.
-10. 남음: Console에서 현재 사용 가능 사용자와 옵트인을 다시 확인하고 최소 12명의 14일 연속 참여 및 미션·피드백 증거를 기록합니다.
-11. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
+7. 완료: versionCode 4 실제 POI 업데이트 `0.2.0-alpha3`은 역사 Alpha 릴리스로 보존되며, 현재 Alpha 게시 버전은 versionCode 5 `0.2.0-alpha4`입니다.
+8. 완료: 2026-08-11 versionCode 6 `0.3.0-alpha1`을 Alpha에 전송했습니다. Alpha, 국·영문 등록정보, 휴대전화·7인치·10인치 스크린샷, 개인정보처리방침 URL과 Data safety를 포함한 13개 변경사항이 `검토 중인 변경사항`에 있습니다.
+9. 완료: 새 휴대전화 4장과 수정된 태블릿 스크린샷은 AI-generated/modified로 라벨했습니다. 기존 아이콘·feature graphic·이전 스크린샷에는 라벨을 붙이지 않았습니다.
+10. 남음: `0.3.0-alpha1`의 빠른 검사와 Google 검토 결과를 확인합니다.
+11. 남음: Console에서 현재 사용 가능 사용자와 옵트인을 다시 확인하고 최소 12명의 14일 연속 참여 및 미션·피드백 증거를 기록합니다.
+12. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
 
 ## 공개 출시 전 필수 게이트
 

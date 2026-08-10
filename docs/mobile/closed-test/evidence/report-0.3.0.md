@@ -9,7 +9,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 - Package: `com.mypaso.app`
 - Android manifest: `versionCode 6`, `versionName 0.3.0`, `targetSdkVersion 36`
 - Privacy policy: [live 0.3.0 policy](https://sinmb79.github.io/my-paso/privacy.html), previously verified current.
-- Play Console versionCode 6 availability and policy answers remain console-pending; do not treat this document as a Play submission claim.
+- Play Console submission: 2026-08-11 KST, Alpha release `0.3.0-alpha1` is in `검토 중인 변경사항`; rapid checks are running. The previously published Alpha version remains `0.2.0-alpha4`.
 
 ## Executed release gates
 
@@ -32,7 +32,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 | Android runtime QA | signed APK upgraded on `Medium_Phone_API_36.1` and Android 16 tablet AVD | required flows and screenshots completed | Passed |
 | Store screenshots | final files inspected | five files; phone 1080 × 2400, tablet 2560 × 1440; Profile shows the full model ID and tablet app frame has no launcher dock | Passed |
 | Scope and secret scan | `git diff --check`, tracked-key extension scan, guarded credential-pattern scan | diff check exit 0; 0 tracked key/keystore files; only four expected identifier/documentation references and no credential values | Passed |
-| Play closed-test upload | Play Console | versionCode 6 availability, policy answers, upload and submission still pending | Pending |
+| Play closed-test upload | Play Console | Alpha `0.3.0-alpha1`, versionCode 6 / versionName 0.3.0, submitted for review | Submitted / reviewing |
 | GitHub publication | tag, push, GitHub Release | not yet performed | Pending |
 
 ### Signing-verification qualification
@@ -53,6 +53,16 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 - Sensitive-marker logcat scan: 0 matches. Error logcat scan: 0 errors.
 - HTTPS private-LAN end-to-end execution is not claimed. It requires a system-trusted certificate chain, exact IP SAN, and WebView CORS support.
 
+## Play Console submission — 2026-08-11 KST
+
+- Alpha release: `0.3.0-alpha1`; versionCode 6, versionName 0.3.0, min API 24, target SDK 36.
+- Submitted AAB: 8,277,246 bytes; SHA-256 `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679`.
+- Play delivery estimate: new install 7.44 MB; update 5.98 MB; supported-device change 0.
+- Submitted 13 changes: Alpha release, Korean and English listings, phone and 7-inch/10-inch tablet screenshots, privacy URL, and Data safety.
+- The four new phone screenshots and corrected tablet screenshot were labeled AI-generated/modified. Existing icon, feature graphic, and older screenshots were not labeled.
+- Data safety submitted: `Photos` and `Other user-generated content` collection Yes, optional, app functionality; sharing No; encryption in transit Yes. Privacy URL: `https://sinmb79.github.io/my-paso/privacy.html`.
+- Two non-blocking Play warnings remain: no R8/Proguard mapping file and no native debug symbols.
+
 ## Artifact locations
 
 - AAB: `android/app/build/outputs/bundle/release/app-release.aab`
@@ -61,6 +71,5 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 
 ## Remaining release gates
 
-1. Immediately before upload, verify in Play Console that versionCode 6 is unused.
-2. Complete the accurate Data safety and policy answers, upload the exact AAB above to closed testing, and submit the release.
-3. Push the approved release commit, tag `v0.3.0`, and create the GitHub release.
+1. Monitor Play rapid checks and review outcome for Alpha `0.3.0-alpha1`.
+2. Push the approved release commit, tag `v0.3.0`, and create the GitHub release.

@@ -117,10 +117,10 @@ describe("Paso 0.3.0 privacy copy", () => {
     expect(playGuide).toMatch(/개발자 프로그램 정책.*answer\/17190352/);
 
     for (const copy of [publishing, playGuide]) {
-      expect(copy).toMatch(/2026-07-30/);
-      expect(copy).toMatch(/현재[^\r\n]*(?:Alpha|게시)[^\r\n]*(?:0\.2\.0-alpha3|versionCode 4)/);
-      expect(copy).toMatch(/(?:제출|검토 중)[^\r\n]*(?:0\.2\.0-alpha4|versionCode 5)/);
-      expect(copy).toMatch(/0\.3\.0[^\r\n]*versionCode 6/);
+      expect(copy).toMatch(/현재 게시 버전[^\r\n]*0\.2\.0-alpha4/);
+      expect(copy).toMatch(/검토 중[^\r\n]*0\.3\.0[^\r\n]*versionCode 6/);
+      expect(copy).toContain("0.3.0-alpha1");
+      expect(copy).toContain("검토 중인 변경사항");
     }
   });
 });
