@@ -7,7 +7,17 @@ const JPEG_QUALITY = 0.82;
 
 type SupportedMimeType = "image/jpeg" | "image/png" | "image/webp";
 type ImageDimensions = { width: number; height: number };
-type WebpCanvas = { dimensions: ImageDimensions; animated: boolean };
+type WebpFeatures = { iccp: boolean; alpha: boolean; exif: boolean; xmp: boolean };
+type WebpCanvas = {
+  dimensions: ImageDimensions;
+  animated: boolean;
+  features: WebpFeatures;
+};
+type WebpBitstream = {
+  type: "VP8 " | "VP8L";
+  dimensions: ImageDimensions;
+  alphaUsed: boolean;
+};
 
 export async function sanitizePhotoForLocalAI(input: string): Promise<string> {
   const dimensions = parsePhotoDataUrl(input);
@@ -199,8 +209,8 @@ function readWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
 
   let offset = 12;
   let canvas: WebpCanvas | null = null;
-  let bitstreamDimensions: ImageDimensions | null = null;
-  let sawAlphaChunk = false;
+  let bitstream: WebpBitstream | null = null;
+  const optionalChunks = { iccp: false, alpha: false, exif: false, xmp: false };
   while (offset < bytes.length) {
     if (offset + 8 > bytes.length) {
       return null;
@@ -228,43 +238,45 @@ function readWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
       canvas = parsedCanvas;
     } else if (chunkType === "ANIM" || chunkType === "ANMF") {
       return null;
-    } else if (chunkType === "ALPH") {
-      if (!canvas || bitstreamDimensions || sawAlphaChunk || chunkLength < 1) {
+    } else if (isOptionalWebpChunk(chunkType)) {
+      const feature = optionalWebpFeature(chunkType);
+      if (!canvas || optionalChunks[feature] || (chunkType === "ALPH" && (bitstream || chunkLength < 1))) {
         return null;
       }
-      sawAlphaChunk = true;
+      optionalChunks[feature] = true;
     } else if (chunkType === "VP8 " || chunkType === "VP8L") {
-      const parsedDimensions = readWebpBitstreamDimensions(
+      const parsedBitstream = readWebpBitstream(
         chunkType,
         bytes,
         payloadOffset,
         chunkLength,
       );
       if (
-        !parsedDimensions ||
-        bitstreamDimensions ||
-        (sawAlphaChunk && chunkType !== "VP8 ")
+        !parsedBitstream ||
+        bitstream ||
+        (optionalChunks.alpha && chunkType !== "VP8 ")
       ) {
         return null;
       }
-      bitstreamDimensions = parsedDimensions;
+      bitstream = parsedBitstream;
     }
 
     offset = payloadOffset + chunkLength + paddingBytes;
   }
 
-  if (!bitstreamDimensions) {
+  if (!bitstream) {
     return null;
   }
   if (
     canvas &&
-    (canvas.dimensions.width !== bitstreamDimensions.width ||
-      canvas.dimensions.height !== bitstreamDimensions.height)
+    (canvas.dimensions.width !== bitstream.dimensions.width ||
+      canvas.dimensions.height !== bitstream.dimensions.height ||
+      !webpFeaturesMatch(canvas.features, optionalChunks, bitstream))
   ) {
     return null;
   }
 
-  return canvas?.dimensions ?? bitstreamDimensions;
+  return canvas?.dimensions ?? bitstream.dimensions;
 }
 
 function readWebpCanvas(
@@ -275,29 +287,43 @@ function readWebpCanvas(
   if (chunkLength !== 10) {
     return null;
   }
+  const flags = bytes[payloadOffset]!;
+  if ((flags & 0xc1) !== 0) {
+    return null;
+  }
   return {
     dimensions: {
       width: readUint24LittleEndian(bytes, payloadOffset + 4) + 1,
       height: readUint24LittleEndian(bytes, payloadOffset + 7) + 1,
     },
-    animated: (bytes[payloadOffset]! & 0x02) !== 0,
+    animated: (flags & 0x02) !== 0,
+    features: {
+      iccp: (flags & 0x20) !== 0,
+      alpha: (flags & 0x10) !== 0,
+      exif: (flags & 0x08) !== 0,
+      xmp: (flags & 0x04) !== 0,
+    },
   };
 }
 
-function readWebpBitstreamDimensions(
+function readWebpBitstream(
   chunkType: "VP8 " | "VP8L",
   bytes: Uint8Array,
   payloadOffset: number,
   chunkLength: number,
-): ImageDimensions | null {
+): WebpBitstream | null {
   if (chunkType === "VP8L") {
     if (chunkLength < 5 || bytes[payloadOffset] !== 0x2f) {
       return null;
     }
     const packed = readUint32LittleEndian(bytes, payloadOffset + 1);
     return {
-      width: (packed & 0x3fff) + 1,
-      height: ((packed >>> 14) & 0x3fff) + 1,
+      type: "VP8L",
+      dimensions: {
+        width: (packed & 0x3fff) + 1,
+        height: ((packed >>> 14) & 0x3fff) + 1,
+      },
+      alphaUsed: ((packed >>> 28) & 1) !== 0,
     };
   }
   if (
@@ -309,9 +335,48 @@ function readWebpBitstreamDimensions(
     return null;
   }
   return {
-    width: readUint16LittleEndian(bytes, payloadOffset + 6) & 0x3fff,
-    height: readUint16LittleEndian(bytes, payloadOffset + 8) & 0x3fff,
+    type: "VP8 ",
+    dimensions: {
+      width: readUint16LittleEndian(bytes, payloadOffset + 6) & 0x3fff,
+      height: readUint16LittleEndian(bytes, payloadOffset + 8) & 0x3fff,
+    },
+    alphaUsed: false,
   };
+}
+
+function isOptionalWebpChunk(chunkType: string): chunkType is "ICCP" | "ALPH" | "EXIF" | "XMP " {
+  return chunkType === "ICCP" || chunkType === "ALPH" || chunkType === "EXIF" || chunkType === "XMP ";
+}
+
+function optionalWebpFeature(chunkType: "ICCP" | "ALPH" | "EXIF" | "XMP "): keyof WebpFeatures {
+  switch (chunkType) {
+    case "ICCP":
+      return "iccp";
+    case "ALPH":
+      return "alpha";
+    case "EXIF":
+      return "exif";
+    case "XMP ":
+      return "xmp";
+  }
+}
+
+function webpFeaturesMatch(
+  features: WebpFeatures,
+  optionalChunks: WebpFeatures,
+  bitstream: WebpBitstream,
+): boolean {
+  if (
+    features.iccp !== optionalChunks.iccp ||
+    features.exif !== optionalChunks.exif ||
+    features.xmp !== optionalChunks.xmp
+  ) {
+    return false;
+  }
+  if (bitstream.type === "VP8L") {
+    return !optionalChunks.alpha && features.alpha === bitstream.alphaUsed;
+  }
+  return features.alpha === optionalChunks.alpha;
 }
 
 function isWithinSourceLimits({ width, height }: ImageDimensions): boolean {

@@ -416,6 +416,13 @@ describe("local AI photo sanitizer", () => {
       ]),
     ],
     [
+      "VP8X with VP8L alpha agreement",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(2400, 1600, 0x10) },
+        { type: "VP8L", payload: vp8lPayload(2400, 1600, true) },
+      ]),
+    ],
+    [
       "VP8X with optional ICCP, EXIF, and XMP chunks",
       webpExtendedRiff([
         { type: "VP8X", payload: vp8xPayload(2400, 1600, 0x3c) },
@@ -434,6 +441,95 @@ describe("local AI photo sanitizer", () => {
       "data:image/jpeg;base64,sanitized-photo",
     );
     expect(assignedSources).toEqual([input]);
+  });
+
+  it.each([
+    ...[0x80, 0x40, 0x01].map((reservedBit) => [
+      `reserved VP8X flag bit 0x${reservedBit.toString(16)}`,
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, reservedBit) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ]),
+    [
+      "declared ICCP without chunk",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x20) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    [
+      "declared alpha without ALPH",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x10) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    [
+      "declared EXIF without chunk",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x08) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    [
+      "declared XMP without chunk",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x04) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    ...[
+      ["ICCP", 0x20],
+      ["ALPH", 0x10],
+      ["EXIF", 0x08],
+      ["XMP ", 0x04],
+    ].map(([chunkType]) => [
+      `present ${chunkType} without its VP8X flag`,
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1) },
+        { type: chunkType as string, payload: [0] },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ]),
+    ...["ICCP", "ALPH", "EXIF", "XMP "].map((chunkType) => [
+      `duplicate ${chunkType} optional chunk`,
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, optionalChunkFlag(chunkType)) },
+        { type: chunkType, payload: [0] },
+        { type: chunkType, payload: [0] },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ]),
+    [
+      "ALPH before VP8L",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x10) },
+        { type: "ALPH", payload: [0] },
+        { type: "VP8L", payload: vp8lPayload(1, 1, true) },
+      ]),
+    ],
+    [
+      "VP8L alpha bit missing from VP8X flag",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1) },
+        { type: "VP8L", payload: vp8lPayload(1, 1, true) },
+      ]),
+    ],
+    [
+      "VP8X alpha flag missing from VP8L alpha bit",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x10) },
+        { type: "VP8L", payload: vp8lPayload(1, 1) },
+      ]),
+    ],
+  ])("rejects static extended WebP flag mismatch %s before image assignment", async (_kind, bytes) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+
+    await expect(
+      sanitizePhotoForLocalAI(`data:image/webp;base64,${bytesToBase64(bytes)}`),
+    ).rejects.toThrow(/photo|dimension/i);
+    expect(assignedSources).toEqual([]);
   });
 
   it.each([
@@ -575,8 +671,9 @@ describe("local AI photo sanitizer", () => {
     return webpRiff("VP8L", vp8lPayload(width, height));
   }
 
-  function vp8lPayload(width: number, height: number) {
-    const dimensions = (width - 1) | ((height - 1) << 14);
+  function vp8lPayload(width: number, height: number, alphaUsed = false) {
+    const dimensions =
+      (width - 1) | ((height - 1) << 14) | (alphaUsed ? 1 << 28 : 0);
     return [
       0x2f,
       dimensions & 0xff,
@@ -592,6 +689,21 @@ describe("local AI photo sanitizer", () => {
       ...uint24LittleEndian(width - 1),
       ...uint24LittleEndian(height - 1),
     ];
+  }
+
+  function optionalChunkFlag(chunkType: string) {
+    switch (chunkType) {
+      case "ICCP":
+        return 0x20;
+      case "ALPH":
+        return 0x10;
+      case "EXIF":
+        return 0x08;
+      case "XMP ":
+        return 0x04;
+      default:
+        throw new Error(`Unsupported optional chunk: ${chunkType}`);
+    }
   }
 
   function webpRiff(chunkType: string, payload: number[]) {
