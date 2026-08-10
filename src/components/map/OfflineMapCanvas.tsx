@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { getPOICategoryLabel, getPOIMarkerColor } from "@/components/map/POIMarker";
 import type { POI } from "@/types";
@@ -117,9 +117,60 @@ export function OfflineMapCanvas({
   fullscreen,
 }: OfflineMapCanvasProps) {
   const [openClusterId, setOpenClusterId] = useState<string | null>(null);
+  const originatingClusterTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const chooserCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const markerBounds = getMarkerBounds(pois);
   const markerClusters = getMarkerClusters(pois, markerBounds);
-  const openCluster = markerClusters.find((cluster) => cluster.id === openClusterId) ?? null;
+  const activeCluster = markerClusters.find((cluster) => cluster.id === openClusterId) ?? null;
+
+  useEffect(() => {
+    if (openClusterId) {
+      chooserCloseButtonRef.current?.focus();
+      return;
+    }
+
+    originatingClusterTriggerRef.current?.focus();
+    originatingClusterTriggerRef.current = null;
+  }, [openClusterId]);
+
+  const openClusterChooser = (clusterId: string, trigger: HTMLButtonElement) => {
+    originatingClusterTriggerRef.current = trigger;
+    setOpenClusterId(clusterId);
+  };
+
+  const closeClusterChooser = () => {
+    setOpenClusterId(null);
+  };
+
+  const handleChooserKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeClusterChooser();
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const controls = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+    );
+    const firstControl = controls[0];
+    const lastControl = controls.at(-1);
+
+    if (!firstControl || !lastControl) {
+      return;
+    }
+
+    if (event.shiftKey && document.activeElement === firstControl) {
+      event.preventDefault();
+      lastControl.focus();
+    } else if (!event.shiftKey && document.activeElement === lastControl) {
+      event.preventDefault();
+      firstControl.focus();
+    }
+  };
 
   return (
     <section
@@ -218,9 +269,9 @@ export function OfflineMapCanvas({
                   ? `${cluster.pois.length}개 장소`
                   : `${markerPoi.name} · ${getPOICategoryLabel(markerPoi.category)}`
               }
-              onClick={() => {
+              onClick={(event) => {
                 if (isCluster) {
-                  setOpenClusterId(cluster.id);
+                  openClusterChooser(cluster.id, event.currentTarget);
                   return;
                 }
 
@@ -232,7 +283,7 @@ export function OfflineMapCanvas({
                 }
 
                 event.preventDefault();
-                setOpenClusterId(cluster.id);
+                openClusterChooser(cluster.id, event.currentTarget);
               }}
               className="absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition active:scale-90"
               style={{
@@ -263,13 +314,20 @@ export function OfflineMapCanvas({
         })}
       </div>
 
-      {openCluster ? (
+      {activeCluster ? (
+        <>
+          <div
+            data-testid="cluster-chooser-backdrop"
+            className="absolute inset-0 z-30"
+            onClick={closeClusterChooser}
+          />
         <div
-          id={`cluster-chooser-${openCluster.id}`}
+          id={`cluster-chooser-${activeCluster.id}`}
           role="dialog"
           aria-modal="true"
           aria-label="장소 선택"
-          className="absolute bottom-4 left-4 right-4 z-30 max-h-[calc(100%-2rem)] overflow-y-auto rounded-2xl border p-3 shadow-xl"
+          onKeyDown={handleChooserKeyDown}
+          className="absolute bottom-4 left-4 right-4 z-40 max-h-[calc(100%-2rem)] overflow-y-auto rounded-2xl border p-3 shadow-xl"
           style={{
             borderColor: "var(--border)",
             backgroundColor: "var(--bg-card)",
@@ -278,16 +336,17 @@ export function OfflineMapCanvas({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                {openCluster.pois.length}개 장소 중 선택
+                {activeCluster.pois.length}개 장소 중 선택
               </h3>
               <p className="mt-0.5 text-xs" style={{ color: "var(--text-tertiary)" }}>
                 각 장소를 눌러 방문 기록으로 이어가세요
               </p>
             </div>
             <button
+              ref={chooserCloseButtonRef}
               type="button"
               aria-label="장소 선택 닫기"
-              onClick={() => setOpenClusterId(null)}
+              onClick={closeClusterChooser}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border text-lg"
               style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
             >
@@ -295,13 +354,13 @@ export function OfflineMapCanvas({
             </button>
           </div>
           <ul className="mt-3 space-y-2">
-            {openCluster.pois.map((poi) => (
+            {activeCluster.pois.map((poi) => (
               <li key={poi.id}>
                 <button
                   type="button"
                   aria-label={`${poi.name} 선택`}
                   onClick={() => {
-                    setOpenClusterId(null);
+                    closeClusterChooser();
                     onSelectPoi(poi.id);
                   }}
                   className="flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm font-semibold"
@@ -321,6 +380,7 @@ export function OfflineMapCanvas({
             ))}
           </ul>
         </div>
+        </>
       ) : null}
 
       {!selectedPoi ? (

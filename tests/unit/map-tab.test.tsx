@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { MapTab } from "@/components/tabs/MapTab";
 import type { POI } from "@/types";
@@ -16,6 +16,33 @@ const testPoi: POI = {
   source: "dummy",
   base_xp: 10,
 };
+
+const densePois = Array.from({ length: 6 }, (_, index) => ({
+  ...testPoi,
+  id: `dense-poi-${index + 1}`,
+  name: `밀집 장소 ${index + 1}`,
+}));
+
+function renderDenseCluster(onSelectPoi = vi.fn()) {
+  render(
+    <MapTab
+      pois={densePois}
+      status="ready"
+      error={null}
+      selectedPoi={null}
+      recentVisits={[]}
+      onSelectPoi={onSelectPoi}
+      onNavigateToJournal={() => undefined}
+    />,
+  );
+
+  return {
+    cluster: screen.getByRole("button", {
+      name: "밀집 장소 1 외 5곳, 6개 장소 선택",
+    }),
+    onSelectPoi,
+  };
+}
 
 describe("MapTab", () => {
   it("caps the first map render to a lightweight marker set", () => {
@@ -44,27 +71,7 @@ describe("MapTab", () => {
 
   it("declutters dense POIs into an accessible cluster that can select every member", () => {
     const onSelectPoi = vi.fn();
-    const densePois = Array.from({ length: 6 }, (_, index) => ({
-      ...testPoi,
-      id: `dense-poi-${index + 1}`,
-      name: `밀집 장소 ${index + 1}`,
-    }));
-
-    render(
-      <MapTab
-        pois={densePois}
-        status="ready"
-        error={null}
-        selectedPoi={null}
-        recentVisits={[]}
-        onSelectPoi={onSelectPoi}
-        onNavigateToJournal={() => undefined}
-      />,
-    );
-
-    const cluster = screen.getByRole("button", {
-      name: "밀집 장소 1 외 5곳, 6개 장소 선택",
-    });
+    const { cluster } = renderDenseCluster(onSelectPoi);
     expect(screen.getAllByRole("button", { name: /선택$/ })).toHaveLength(1);
     expect(cluster).toHaveAttribute("aria-expanded", "false");
 
@@ -81,6 +88,60 @@ describe("MapTab", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "밀집 장소 6 선택" }));
     expect(onSelectPoi).toHaveBeenCalledWith("dense-poi-6");
+  });
+
+  it("focuses the chooser and wraps Tab and Shift+Tab between its controls", () => {
+    const { cluster } = renderDenseCluster();
+
+    fireEvent.click(cluster);
+
+    const chooser = screen.getByRole("dialog", { name: "장소 선택" });
+    const closeButton = within(chooser).getByRole("button", { name: "장소 선택 닫기" });
+    const lastMember = within(chooser).getByRole("button", { name: "밀집 장소 6 선택" });
+    expect(closeButton).toHaveFocus();
+
+    lastMember.focus();
+    fireEvent.keyDown(lastMember, { key: "Tab" });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(closeButton, { key: "Tab", shiftKey: true });
+    expect(lastMember).toHaveFocus();
+  });
+
+  it("restores the cluster trigger after Escape, close, and backdrop dismissal", () => {
+    const { cluster, onSelectPoi } = renderDenseCluster();
+
+    fireEvent.click(cluster);
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "장소 선택" }), { key: "Escape" });
+    expect(cluster).toHaveFocus();
+    expect(cluster).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(cluster);
+    fireEvent.click(screen.getByRole("button", { name: "장소 선택 닫기" }));
+    expect(cluster).toHaveFocus();
+    expect(cluster).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(cluster);
+    fireEvent.click(screen.getByTestId("cluster-chooser-backdrop"));
+    expect(cluster).toHaveFocus();
+    expect(cluster).toHaveAttribute("aria-expanded", "false");
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("opens a cluster with Space and restores focus after selecting exactly one member", () => {
+    const { cluster, onSelectPoi } = renderDenseCluster();
+    cluster.focus();
+
+    fireEvent.keyDown(cluster, { key: " " });
+
+    expect(cluster).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "장소 선택 닫기" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "밀집 장소 3 선택" }));
+
+    expect(onSelectPoi).toHaveBeenCalledTimes(1);
+    expect(onSelectPoi).toHaveBeenCalledWith("dense-poi-3");
+    expect(cluster).toHaveFocus();
+    expect(cluster).toHaveAttribute("aria-expanded", "false");
   });
 
   it("uses an explicit fullscreen host without arbitrary descendant selectors", () => {
