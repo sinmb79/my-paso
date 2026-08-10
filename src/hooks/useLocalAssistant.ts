@@ -26,6 +26,7 @@ export function useLocalAssistant(): LocalAssistantState {
   const [error, setError] = useState<string | null>(null);
   const activeControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+  const reloadGenerationRef = useRef(0);
 
   const cancel = useCallback(() => {
     const activeController = activeControllerRef.current;
@@ -37,22 +38,23 @@ export function useLocalAssistant(): LocalAssistantState {
   }, []);
 
   const reload = useCallback(async () => {
+    const generation = ++reloadGenerationRef.current;
     if (mountedRef.current) {
       setLoading(true);
       setError(null);
     }
     try {
       const loadedSettings = await loadLocalAISettings();
-      if (mountedRef.current) {
+      if (mountedRef.current && reloadGenerationRef.current === generation) {
         setSettings(loadedSettings);
       }
     } catch (loadError) {
-      if (mountedRef.current) {
+      if (mountedRef.current && reloadGenerationRef.current === generation) {
         setSettings(null);
         setError(errorMessage(loadError));
       }
     } finally {
-      if (mountedRef.current) {
+      if (mountedRef.current && reloadGenerationRef.current === generation) {
         setLoading(false);
       }
     }
@@ -63,6 +65,7 @@ export function useLocalAssistant(): LocalAssistantState {
     void reload();
     return () => {
       mountedRef.current = false;
+      reloadGenerationRef.current += 1;
       const activeController = activeControllerRef.current;
       activeControllerRef.current = null;
       activeController?.abort(new DOMException("Local AI request cancelled.", "AbortError"));

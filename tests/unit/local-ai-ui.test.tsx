@@ -2,6 +2,7 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-li
 
 import { LocalAISettings } from "@/components/ai/LocalAISettings";
 import { loadLocalAISettings, saveLocalAISettings } from "@/lib/ai/preferences";
+import * as localAIPreferences from "@/lib/ai/preferences";
 import { useLocalAssistant } from "@/hooks/useLocalAssistant";
 
 const connectionResponse = () =>
@@ -10,6 +11,25 @@ const connectionResponse = () =>
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+const savedSettings = (model = "local-korean-model") => ({
+  enabled: true,
+  vendor: "naver" as const,
+  endpoint: "http://127.0.0.1:8000",
+  model,
+  capability: "text" as const,
+  confirmedPrivateLANEndpoint: null,
+});
+
 describe("LocalAISettings", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -17,6 +37,7 @@ describe("LocalAISettings", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -34,11 +55,14 @@ describe("LocalAISettings", () => {
     render(<LocalAISettings onToast={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
     fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
       target: { value: "https://example.com" },
     });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(/localhost 또는 숫자로 된 사설망 IP 주소/);
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
     expect(screen.getByRole("button", { name: "설정 저장" })).toBeDisabled();
     await expect(loadLocalAISettings()).resolves.toBeNull();
   });
@@ -84,10 +108,10 @@ describe("LocalAISettings", () => {
     const onToast = vi.fn();
     render(<LocalAISettings onToast={onToast} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
     fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
       target: { value: "http://127.0.0.1:8000" },
     });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
     fireEvent.click(screen.getByRole("button", { name: "설정 저장" }));
 
     await waitFor(() => {
@@ -100,6 +124,80 @@ describe("LocalAISettings", () => {
     expect(requestInit.body).toContain("HyperCLOVAX-SEED-Text-Instruct-0.5B");
     expect(requestInit.body).not.toContain("사용자가 쓴 짧은 메모");
   });
+
+  it("never tests an obsolete saved runtime after the draft endpoint becomes invalid", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(connectionResponse());
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://127.0.0.1:8000" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
+    fireEvent.click(screen.getByRole("button", { name: "설정 저장" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "연결 테스트" })).toBeEnabled());
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "https://example.com" },
+    });
+
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "연결 테스트" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "연결 테스트" }));
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("gates testing when a saved runtime is changed to a new unconfirmed private LAN endpoint", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(connectionResponse());
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://127.0.0.1:8000" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
+    fireEvent.click(screen.getByRole("button", { name: "설정 저장" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "연결 테스트" })).toBeEnabled());
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://192.168.0.20:8000" },
+    });
+
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "연결 테스트" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "연결 테스트" }));
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("cancels an active connection test when the current draft becomes incompatible", async () => {
+    let requestSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          requestSignal = init?.signal;
+          requestSignal?.addEventListener("abort", () => reject(requestSignal?.reason));
+        }),
+      ),
+    );
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "http://127.0.0.1:8000" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "로컬 AI 사용" }));
+    fireEvent.click(screen.getByRole("button", { name: "설정 저장" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "연결 테스트" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "연결 테스트" }));
+    await waitFor(() => expect(requestSignal).toBeDefined());
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "https://example.com" },
+    });
+
+    await waitFor(() => expect(requestSignal?.aborted).toBe(true));
+    expect(screen.getByRole("button", { name: "연결 테스트" })).toBeDisabled();
+  });
 });
 
 describe("useLocalAssistant", () => {
@@ -109,6 +207,7 @@ describe("useLocalAssistant", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -177,5 +276,60 @@ describe("useLocalAssistant", () => {
     const { result } = renderHook(() => useLocalAssistant(), { reactStrictMode: true });
 
     await waitFor(() => expect(result.current.settings?.model).toBe("local-korean-model"));
+  });
+
+  it("keeps the latest successful reload when an older load resolves later", async () => {
+    const first = deferred<ReturnType<typeof savedSettings> | null>();
+    const second = deferred<ReturnType<typeof savedSettings> | null>();
+    const load = vi
+      .spyOn(localAIPreferences, "loadLocalAISettings")
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useLocalAssistant());
+
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    act(() => void result.current.reload());
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    await act(async () => second.resolve(savedSettings("latest")));
+    expect(result.current.settings?.model).toBe("latest");
+
+    await act(async () => first.resolve(savedSettings("stale")));
+    expect(result.current.settings?.model).toBe("latest");
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("does not let an older failed reload clear the newer loading state or error", async () => {
+    const first = deferred<ReturnType<typeof savedSettings> | null>();
+    const second = deferred<ReturnType<typeof savedSettings> | null>();
+    const load = vi
+      .spyOn(localAIPreferences, "loadLocalAISettings")
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useLocalAssistant());
+
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    act(() => void result.current.reload());
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    await act(async () => first.reject(new Error("stale load failure")));
+
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBeNull();
+    await act(async () => second.resolve(savedSettings("latest")));
+    expect(result.current.settings?.model).toBe("latest");
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("ignores a delayed load after unmount", async () => {
+    const pending = deferred<ReturnType<typeof savedSettings> | null>();
+    const load = vi.spyOn(localAIPreferences, "loadLocalAISettings").mockReturnValue(pending.promise);
+    const { result, unmount } = renderHook(() => useLocalAssistant());
+
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    unmount();
+    await act(async () => pending.resolve(savedSettings("must-not-commit")));
+
+    expect(result.current.settings).toBeNull();
   });
 });

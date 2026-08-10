@@ -38,8 +38,22 @@ function selectModel(settings: LocalAISettingsValue, capability: LocalAICapabili
   return capability === "vision" ? vendor.visionModel : vendor.textModel;
 }
 
+function settingsMatch(
+  current: LocalAISettingsValue | null,
+  draft: LocalAISettingsValue,
+) {
+  return current !== null &&
+    current.enabled &&
+    current.enabled === draft.enabled &&
+    current.vendor === draft.vendor &&
+    current.endpoint === draft.endpoint &&
+    current.model === draft.model &&
+    current.capability === draft.capability &&
+    current.confirmedPrivateLANEndpoint === draft.confirmedPrivateLANEndpoint;
+}
+
 export function LocalAISettings({ onToast }: LocalAISettingsProps) {
-  const assistant = useLocalAssistant();
+  const { cancel, ...assistant } = useLocalAssistant();
   const [draft, setDraft] = useState<LocalAISettingsValue>(defaultSettings);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -58,6 +72,13 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
   const validEndpoint = validation.ok;
   const privateEndpointNeedsConfirmation = !validation.ok && validation.reason === "confirmation_required";
   const endpointMessage = draft.endpoint.length > 0 && !validation.ok ? endpointErrors[validation.reason] : null;
+  const currentDraftCanTest = validEndpoint && draft.enabled && settingsMatch(assistant.settings, draft);
+
+  useEffect(() => {
+    if (!currentDraftCanTest) {
+      cancel();
+    }
+  }, [cancel, currentDraftCanTest]);
 
   const changeVendor = (vendor: LocalAISettingsValue["vendor"]) => {
     setDraft((current) => {
@@ -71,6 +92,17 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
     setDraft((current) => {
       const next = { ...current, capability };
       return { ...next, model: selectModel(next, capability) };
+    });
+    setFormError(null);
+  };
+
+  const changeEndpoint = (endpoint: string) => {
+    setDraft((current) => {
+      const next = { ...current, endpoint, confirmedPrivateLANEndpoint: null };
+      return {
+        ...next,
+        enabled: validateLocalAIEndpoint(next.endpoint).ok ? current.enabled : false,
+      };
     });
     setFormError(null);
   };
@@ -134,7 +166,8 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
           <input
             type="checkbox"
             checked={draft.enabled}
-            onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
+            disabled={!validEndpoint}
+            onChange={(event) => setDraft((current) => ({ ...current, enabled: validEndpoint && event.target.checked }))}
             aria-label="로컬 AI 사용"
           />
           사용
@@ -151,7 +184,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
 
         <label className="grid gap-1.5 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
           로컬 실행 주소
-          <input value={draft.endpoint} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value, confirmedPrivateLANEndpoint: null }))} inputMode="url" placeholder="http://127.0.0.1:8000" className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: endpointMessage ? "var(--warning)" : "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+          <input value={draft.endpoint} onChange={(event) => changeEndpoint(event.target.value)} inputMode="url" placeholder="http://127.0.0.1:8000" className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: endpointMessage ? "var(--warning)" : "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
         </label>
 
         {validation.ok ? <p className="rounded-xl px-3 py-2 text-xs font-bold" style={{ backgroundColor: "var(--accent-bg)", color: "var(--text-primary)" }}>{validation.scope === "loopback" ? "이 브라우저/기기에서 실행 (이 브라우저의 localhost)" : "내 사설망 기기"}</p> : null}
@@ -184,7 +217,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
         <div className="grid grid-cols-3 gap-2">
           <button type="button" onClick={() => void save()} disabled={saving || !validEndpoint} className="min-h-11 rounded-xl font-black disabled:opacity-50" style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}>설정 저장</button>
           <button type="button" onClick={() => void clear()} disabled={saving} className="min-h-11 rounded-xl border text-sm font-bold disabled:opacity-50" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>설정 지우기</button>
-          <button type="button" onClick={() => void testConnection()} disabled={saving || assistant.loading || !assistant.settings?.enabled} className="min-h-11 rounded-xl border text-sm font-bold disabled:opacity-50" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>연결 테스트</button>
+          <button type="button" onClick={() => void testConnection()} disabled={saving || assistant.loading || !currentDraftCanTest} className="min-h-11 rounded-xl border text-sm font-bold disabled:opacity-50" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>연결 테스트</button>
         </div>
       </div>
     </section>
