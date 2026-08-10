@@ -39,8 +39,11 @@ describe("local AI model catalog", () => {
 describe("local AI endpoint policy", () => {
   it.each([
     "http://localhost:8000",
+    "https://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://127.0.0.1:8000",
     "http://[::1]:8000",
+    "https://[::1]:8000",
   ])("accepts loopback endpoint %s", (endpoint) => {
     expect(validateLocalAIEndpoint(endpoint)).toMatchObject({
       ok: true,
@@ -48,21 +51,34 @@ describe("local AI endpoint policy", () => {
     });
   });
 
-  it("requires an exact renewed confirmation for a private IPv4 endpoint", () => {
+  it("rejects HTTP private IPv4 before ownership confirmation", () => {
     expect(validateLocalAIEndpoint("http://192.168.0.20:8000")).toMatchObject({
       ok: false,
-      reason: "confirmation_required",
+      reason: "private_lan_https_required",
     });
     expect(
       validateLocalAIEndpoint(
         "http://192.168.0.20:8000",
         "http://192.168.0.20:8000",
       ),
+    ).toMatchObject({ ok: false, reason: "private_lan_https_required" });
+  });
+
+  it("requires an exact renewed confirmation for an HTTPS private IPv4 endpoint", () => {
+    expect(validateLocalAIEndpoint("https://192.168.0.20:8000")).toMatchObject({
+      ok: false,
+      reason: "confirmation_required",
+    });
+    expect(
+      validateLocalAIEndpoint(
+        "https://192.168.0.20:8000",
+        "https://192.168.0.20:8000",
+      ),
     ).toMatchObject({ ok: true, scope: "private_lan" });
     expect(
       validateLocalAIEndpoint(
-        "http://192.168.0.20:8000",
-        "http://192.168.0.21:8000",
+        "https://192.168.0.20:8000",
+        "https://192.168.0.21:8000",
       ),
     ).toMatchObject({ ok: false, reason: "confirmation_required" });
   });
@@ -88,8 +104,8 @@ describe("local AI endpoint policy", () => {
   });
 
   it.each([
-    ["http://192.168.0.20:8000?", "query_not_allowed"],
-    ["http://192.168.0.20:8000#", "fragment_not_allowed"],
+    ["https://192.168.0.20:8000?", "query_not_allowed"],
+    ["https://192.168.0.20:8000#", "fragment_not_allowed"],
   ] as const)("rejects a bare private-LAN delimiter in %s", (endpoint, reason) => {
     expect(validateLocalAIEndpoint(endpoint, endpoint)).toMatchObject({
       ok: false,
@@ -98,10 +114,10 @@ describe("local AI endpoint policy", () => {
   });
 
   it.each([
-    "http://10.20.30.40:8000",
+    "https://10.20.30.40:8000",
     "https://172.16.0.1:8000",
-    "http://172.31.255.255:8000",
-    "http://192.168.255.255:8000",
+    "https://172.31.255.255:8000",
+    "https://192.168.255.255:8000",
   ])("allows confirmed literal private IPv4 endpoint %s", (endpoint) => {
     expect(validateLocalAIEndpoint(endpoint, endpoint)).toMatchObject({
       ok: true,
@@ -805,6 +821,7 @@ describe("local AI settings persistence", () => {
     ["http://127.0.0.1:8000#fragment", null],
     ["http://192.168.0.20:8000", null],
     ["http://192.168.0.20:8000", "http://192.168.0.21:8000"],
+    ["http://192.168.0.20:8000", "http://192.168.0.20:8000"],
   ] as const)(
     "refuses unsafe settings endpoint %s without writing storage",
     async (endpoint, confirmedPrivateLANEndpoint) => {
@@ -846,6 +863,30 @@ describe("local AI settings persistence", () => {
     );
 
     await expect(loadLocalAISettings()).resolves.toBeNull();
+  });
+
+  it("purges a legacy confirmed HTTP private-LAN setting", async () => {
+    await saveLocalAISettings(localAISettings());
+    const key = localStorage.key(0);
+    if (!key) {
+      throw new Error("Local AI settings key was not persisted");
+    }
+    const legacyEndpoint = "http://192.168.0.20:8000";
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...localAISettings(),
+        endpoint: legacyEndpoint,
+        confirmedPrivateLANEndpoint: legacyEndpoint,
+      }),
+    );
+    const removeSetting = vi.spyOn(nativePreferences, "removeSetting");
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(removeSetting).toHaveBeenCalledWith(key);
+    expect(localStorage.getItem(key)).toBeNull();
+    removeSetting.mockRestore();
   });
 
   it.each([

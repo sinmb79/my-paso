@@ -57,5 +57,6 @@ export type LocalAIEndpointValidation =
         | "endpoint_path_not_allowed"
         | "hostname_not_allowed"
         | "public_address_not_allowed"
+        | "private_lan_https_required"
         | "confirmation_required";
     };

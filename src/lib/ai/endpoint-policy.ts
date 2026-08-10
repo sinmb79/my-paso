@@ -35,7 +35,7 @@ function rawHost(endpoint: string): string | null {
 }
 
 /**
- * Validates only literal loopback or explicitly confirmed private-LAN origins.
+ * Validates only literal loopback or HTTPS, explicitly confirmed private-LAN origins.
  * Hostnames are never resolved, preventing DNS-based locality bypasses.
  */
 export function validateLocalAIEndpoint(
@@ -88,6 +88,9 @@ export function validateLocalAIEndpoint(
   }
   if (!privateIpv4Ranges.some((contains) => contains(octets))) {
     return { ok: false, reason: "public_address_not_allowed" };
+  }
+  if (parsed.protocol !== "https:") {
+    return { ok: false, reason: "private_lan_https_required" };
   }
   if (confirmedPrivateLANEndpoint !== endpoint) {
     return { ok: false, reason: "confirmation_required" };

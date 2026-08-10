@@ -32,6 +32,7 @@ const endpointErrors: Record<string, string> = {
   endpoint_path_not_allowed: "기본 주소만 입력하세요. /v1 경로는 자동으로 처리됩니다.",
   hostname_not_allowed: "localhost 또는 숫자로 된 사설망 IP 주소만 사용할 수 있습니다.",
   public_address_not_allowed: "공개 인터넷 주소는 사용할 수 없습니다.",
+  private_lan_https_required: "사설망 주소는 HTTPS가 필요합니다. HTTP는 이 기기의 loopback 주소에서만 사용할 수 있습니다.",
   confirmation_required: "사설망 기기 소유 확인이 필요합니다.",
 };
 
@@ -217,7 +218,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
             draftDirtyRef.current = true;
             setDraft((current) => ({ ...current, confirmedPrivateLANEndpoint: event.target.checked ? current.endpoint : null }));
           }} aria-label={`${draft.endpoint.replace(/^https?:\/\//, "")} 엔드포인트를 내가 관리`} />
-          <span>데이터가 이 기기를 떠날 수 있으며, 해당 엔드포인트 운영자가 내용을 볼 수 있습니다. 이 정확한 사설망 엔드포인트를 내가 관리함을 확인합니다.</span>
+          <span>데이터가 이 기기를 떠날 수 있으며, 해당 엔드포인트 운영자가 내용을 볼 수 있습니다. 사설망 전송에는 HTTPS와 플랫폼 TLS 인증서 검증을 사용합니다. 이 정확한 사설망 엔드포인트를 내가 관리함을 확인합니다.</span>
         </label> : null}
         {endpointMessage ? <p role="alert" className="text-xs leading-relaxed" style={{ color: "var(--warning)" }}>{endpointMessage}</p> : null}
 

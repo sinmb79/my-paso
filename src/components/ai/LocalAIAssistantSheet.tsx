@@ -354,6 +354,7 @@ export function LocalAIAssistantSheet({
                     EXIF를 제거하고 크기를 줄인 임시 사진도 이 기기 밖으로 전송되며 {settings.endpoint}에서 처리됩니다.
                   </p>
                 ) : null}
+                <p>사설망 전송은 HTTPS로 암호화되며 플랫폼 TLS 인증서 검증을 통과해야 합니다.</p>
                 <p>엔드포인트 운영자가 이 내용을 처리할 수 있습니다.</p>
               </div>
             ) : (

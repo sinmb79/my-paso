@@ -341,8 +341,8 @@ describe("LocalAIAssistantSheet", () => {
   it("warns that selected content leaves this device for a private-LAN operator", async () => {
     const lanSettings: LocalAISettingsValue = {
       ...visionSettings,
-      endpoint: "http://192.168.0.20:8000",
-      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+      endpoint: "https://192.168.0.20:8000",
+      confirmedPrivateLANEndpoint: "https://192.168.0.20:8000",
     };
     render(
       <LocalAIAssistantSheet
@@ -364,8 +364,9 @@ describe("LocalAIAssistantSheet", () => {
       "사설망으로 보낼 메모",
     );
     expect(screen.getByText(/EXIF를 제거하고 크기를 줄인 임시 사진/)).toHaveTextContent(
-      "http://192.168.0.20:8000",
+      "https://192.168.0.20:8000",
     );
+    expect(screen.getByText(/HTTPS로 암호화/)).toHaveTextContent(/플랫폼 TLS 인증서 검증/);
     expect(screen.getByText(/엔드포인트 운영자가 이 내용을 처리할 수 있습니다/)).toBeInTheDocument();
   });
 
@@ -512,16 +513,28 @@ describe("LocalAISettings", () => {
     await expect(loadLocalAISettings()).resolves.toBeNull();
   });
 
-  it("requires a confirmation tied to the exact private-LAN endpoint", () => {
+  it("blocks HTTP private LAN before showing ownership confirmation", () => {
     render(<LocalAISettings onToast={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
       target: { value: "http://192.168.0.20:8000" },
     });
 
+    expect(screen.getByRole("alert")).toHaveTextContent(/사설망 주소는 HTTPS가 필요/);
+    expect(screen.queryByRole("checkbox", { name: /엔드포인트를 내가 관리/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "설정 저장" })).toBeDisabled();
+  });
+
+  it("requires a confirmation tied to the exact HTTPS private-LAN endpoint", () => {
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
+      target: { value: "https://192.168.0.20:8000" },
+    });
+
     expect(
       screen.getByText(/데이터가 이 기기를 떠날 수 있으며, 해당 엔드포인트 운영자가 내용을 볼 수 있습니다/),
-    ).toBeInTheDocument();
+    ).toHaveTextContent(/HTTPS와 플랫폼 TLS 인증서 검증/);
     expect(screen.getByRole("button", { name: "설정 저장" })).toBeDisabled();
 
     fireEvent.click(
@@ -532,7 +545,7 @@ describe("LocalAISettings", () => {
     expect(screen.getByRole("button", { name: "설정 저장" })).not.toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
-      target: { value: "http://192.168.0.21:8000" },
+      target: { value: "https://192.168.0.21:8000" },
     });
 
     expect(screen.getByRole("button", { name: "설정 저장" })).toBeDisabled();
@@ -622,7 +635,7 @@ describe("LocalAISettings", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "연결 테스트" })).toBeEnabled());
 
     fireEvent.change(screen.getByLabelText("로컬 실행 주소"), {
-      target: { value: "http://192.168.0.20:8000" },
+      target: { value: "https://192.168.0.20:8000" },
     });
 
     expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).not.toBeChecked();
