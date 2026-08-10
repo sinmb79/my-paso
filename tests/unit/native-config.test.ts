@@ -26,12 +26,12 @@ describe("native privacy and permission configuration", () => {
       "utf8",
     );
 
-    expect(releaseScript).toContain("[int]$VersionCode = 5");
+    expect(releaseScript).toContain("[int]$VersionCode = 6");
     expect(releaseScript).toContain(
       `[string]$VersionName = '${packageJson.version}'`,
     );
     expect(androidGradle).toContain(
-      "System.getenv('MY_PASO_VERSION_CODE') ?: '5'",
+      "System.getenv('MY_PASO_VERSION_CODE') ?: '6'",
     );
   });
 

@@ -7,4 +7,4 @@ Hello! My Paso! 0.3.0 closed-test update.
 - Clearer place-distribution map, reduced marker overlap, and more compact Explore filters
 - Refined textures, contrast, keyboard focus, and small-screen accessibility
 
-AI is optional and no model is bundled. HTTPS private-LAN use is an off-device transfer; its operator can process the content and platform TLS encrypts it in transit. HTTP localhost stays on-device. The developer does not operate the AI runtime or receive, retain, or inspect requests.
+AI is optional and no model is bundled. HTTPS private-LAN use requires a compatible owner-operated runtime with a valid TLS certificate; it is an off-device transfer, its operator can process the content, and platform TLS encrypts it in transit. HTTP localhost stays on-device. The developer does not operate the AI runtime or receive, retain, or inspect requests.
