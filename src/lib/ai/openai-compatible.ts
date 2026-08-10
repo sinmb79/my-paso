@@ -4,8 +4,8 @@ import { validateLocalAIDraft } from "./draft-validator";
 import * as endpointPolicy from "./endpoint-policy";
 
 const DEFAULT_TIMEOUT_MS = 45_000;
-const MAX_ERROR_TEXT_LENGTH = 512;
-const MAX_RESPONSE_BODY_LENGTH = 32_768;
+const MAX_ERROR_BODY_BYTES = 512;
+const MAX_RESPONSE_BODY_BYTES = 32_768;
 const MAX_DRAFT_JSON_LENGTH = 20_000;
 
 type ChatMessage = {
@@ -26,21 +26,65 @@ function cancellationError(signal: AbortSignal): unknown {
   return signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
 }
 
+type BoundedBody = {
+  text: string;
+  tooLarge: boolean;
+};
+
+async function readBoundedBody(response: Response, maximumBytes: number): Promise<BoundedBody> {
+  if (!response.body) {
+    return { text: "", tooLarge: false };
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const textParts: string[] = [];
+  let byteLength = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return { text: textParts.join("") + decoder.decode(), tooLarge: false };
+      }
+
+      const remainingBytes = maximumBytes - byteLength;
+      if (value.byteLength > remainingBytes) {
+        if (remainingBytes > 0) {
+          textParts.push(decoder.decode(value.subarray(0, remainingBytes), { stream: true }));
+        }
+        try {
+          await reader.cancel();
+        } catch {
+          // A failed cancellation must not turn a bounded-body rejection into an unbounded fallback.
+        }
+        return { text: textParts.join("") + decoder.decode(), tooLarge: true };
+      }
+
+      byteLength += value.byteLength;
+      textParts.push(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+}
+
 async function readBoundedError(response: Response): Promise<string> {
   try {
-    return (await response.text()).trim().slice(0, MAX_ERROR_TEXT_LENGTH);
+    const body = await readBoundedBody(response, MAX_ERROR_BODY_BYTES);
+    return body.text.trim();
   } catch {
     return "";
   }
 }
 
 async function readBoundedJSON(response: Response): Promise<unknown> {
-  const body = await response.text();
-  if (body.length > MAX_RESPONSE_BODY_LENGTH) {
+  const body = await readBoundedBody(response, MAX_RESPONSE_BODY_BYTES);
+  if (body.tooLarge) {
     throw new Error("Local AI response body is too large.");
   }
   try {
-    return JSON.parse(body);
+    return JSON.parse(body.text);
   } catch {
     throw new Error("Local AI response did not contain valid JSON.");
   }

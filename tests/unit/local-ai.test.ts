@@ -129,10 +129,11 @@ describe("local AI request boundary", () => {
     expect(JSON.stringify(request)).not.toMatch(
       /latitude|longitude|photoId|exif|backup/i,
     );
-    expect(request.systemPrompt).toMatch(/one JSON object/i);
-    expect(request.systemPrompt).toMatch(/observations/i);
-    expect(request.systemPrompt).toMatch(/interpretations/i);
-    expect(request.systemPrompt).toMatch(/person.*place.*date/i);
+    expect(request.systemPrompt).toMatch(/[가-힣]/);
+    expect(request.systemPrompt).toMatch(/하나의 JSON 객체/);
+    expect(request.systemPrompt).toMatch(/관찰.*해석.*분리/);
+    expect(request.systemPrompt).toMatch(/인물.*장소.*날짜.*이유.*사실/);
+    expect(request.systemPrompt).toMatch(/제공.*입력.*만들어.*주장/);
     expect(request.input).toEqual({
       intent: "journal_draft",
       placeName: "천지연폭포",
@@ -217,16 +218,54 @@ const localAISettings = (
   confirmedPrivateLANEndpoint: null,
 });
 
-const jsonResponse = (value: unknown, status = 200): Response =>
-  ({
+const jsonResponse = (value: unknown, status = 200): Response => {
+  const body = JSON.stringify(value);
+  return {
     ok: status >= 200 && status < 300,
     status,
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(body));
+        controller.close();
+      },
+    }),
     json: vi.fn().mockResolvedValue(value),
-    text: vi.fn().mockResolvedValue(JSON.stringify(value)),
-  }) as unknown as Response;
+    text: vi.fn().mockResolvedValue(body),
+  } as unknown as Response;
+};
 
 const draftChoice = (draft = { title: "초안", body: "본문", keywords: [] }): Response =>
   jsonResponse({ choices: [{ message: { content: JSON.stringify(draft) } }] });
+
+function streamingResponse(chunks: string[], status = 200) {
+  const encoder = new TextEncoder();
+  let index = 0;
+  const reader = {
+    read: vi.fn(async () => {
+      if (index === chunks.length) {
+        return { done: true, value: undefined };
+      }
+      const value = encoder.encode(chunks[index]);
+      index += 1;
+      return { done: false, value };
+    }),
+    cancel: vi.fn().mockResolvedValue(undefined),
+  };
+  return {
+    response: {
+      ok: status >= 200 && status < 300,
+      status,
+      body: { getReader: () => reader },
+      text: vi.fn(() => {
+        throw new Error("unbounded text fallback must not be called");
+      }),
+      arrayBuffer: vi.fn(() => {
+        throw new Error("unbounded arrayBuffer fallback must not be called");
+      }),
+    } as unknown as Response,
+    reader,
+  };
+}
 
 describe("OpenAI-compatible local assistant", () => {
   it("posts a text-only bounded request to the validated chat endpoint", async () => {
@@ -389,6 +428,46 @@ describe("OpenAI-compatible local assistant", () => {
         imageDataUrl: null,
       }),
     ).rejects.toThrow(/too large/i);
+  });
+
+  it("cancels an oversized streaming success body before buffering all chunks", async () => {
+    const streamed = streamingResponse(["x".repeat(32_768), "x", "never read"]);
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl: vi.fn().mockResolvedValue(streamed.response),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/too large/i);
+
+    expect(streamed.reader.read).toHaveBeenCalledTimes(2);
+    expect(streamed.reader.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels an oversized streaming error body without buffering the remainder", async () => {
+    const streamed = streamingResponse(["x".repeat(512), "x", "never read"], 500);
+    const assistant = createOpenAICompatibleAssistant({
+      settings: localAISettings(),
+      fetchImpl: vi.fn().mockResolvedValue(streamed.response),
+    });
+
+    await expect(
+      assistant.generate({
+        intent: "journal_draft",
+        placeName: null,
+        note: "기록",
+        imageDataUrl: null,
+      }),
+    ).rejects.toThrow(/^Local AI request failed \(500\): x{512}$/);
+
+    expect(streamed.reader.read).toHaveBeenCalledTimes(2);
+    expect(streamed.reader.cancel).toHaveBeenCalledTimes(1);
   });
 
   it("aborts a stalled request at the configured timeout", async () => {

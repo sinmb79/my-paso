@@ -11,9 +11,9 @@ export type LocalAIRequest = {
 };
 
 const SYSTEM_PROMPT = [
-  "Return one JSON object only, with title, body, category, keywords, mood, altText, and observations.",
-  "Keep visible observations separate from interpretations.",
-  "Do not assert a person, place, date, ownership, or historical fact unless it is supplied in the user's text.",
+  "반드시 하나의 JSON 객체만 반환하세요. title, body, category, keywords, mood, altText, observations 필드를 사용하세요.",
+  "관찰한 내용과 해석을 분리하세요.",
+  "사용자가 제공한 입력에 없는 인물, 장소, 날짜, 이유 또는 사실을 만들어 주장하지 마세요.",
 ].join(" ");
 
 export function buildLocalAIRequest(preview: LocalAIRequestPreview): LocalAIRequest {
