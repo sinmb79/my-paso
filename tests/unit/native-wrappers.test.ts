@@ -14,7 +14,10 @@ const filesystemState = {
 };
 
 const shareMock = vi.fn(async () => ({ activityType: "test" }));
-const preferenceRemoveMock = vi.fn(async () => undefined);
+const preferenceValues = new Map<string, string>();
+const preferenceRemoveMock = vi.fn(async ({ key }: { key: string }) => {
+  preferenceValues.delete(key);
+});
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
@@ -56,8 +59,12 @@ vi.mock("@capacitor/share", () => ({
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    get: vi.fn(async () => ({ value: null })),
-    set: vi.fn(async () => undefined),
+    get: vi.fn(async ({ key }: { key: string }) => ({
+      value: preferenceValues.get(key) ?? null,
+    })),
+    set: vi.fn(async ({ key, value }: { key: string; value: string }) => {
+      preferenceValues.set(key, value);
+    }),
     remove: preferenceRemoveMock,
   },
 }));
@@ -69,6 +76,7 @@ describe("native wrappers", () => {
     localStorage.clear();
     shareMock.mockClear();
     preferenceRemoveMock.mockClear();
+    preferenceValues.clear();
   });
 
   it("reports the active platform through Capacitor", async () => {
@@ -107,6 +115,45 @@ describe("native wrappers", () => {
     await removeSetting("map-style");
 
     expect(preferenceRemoveMock).toHaveBeenCalledWith({ key: "map-style" });
+  });
+
+  it.each([
+    "{",
+    JSON.stringify({
+      enabled: true,
+      vendor: "naver",
+      endpoint: "http://user:password@127.0.0.1:8000",
+      model: "local-korean-model",
+      capability: "text",
+      confirmedPrivateLANEndpoint: null,
+    }),
+    JSON.stringify({
+      enabled: true,
+      vendor: "naver",
+      endpoint: "http://8.8.8.8:8000",
+      model: "local-korean-model",
+      capability: "text",
+      confirmedPrivateLANEndpoint: null,
+    }),
+  ])("purges malformed or unsafe legacy local-AI settings on native", async (legacyValue) => {
+    capacitorState.isNative = true;
+    const key = "paso.local-ai.settings";
+    preferenceValues.set(key, legacyValue);
+    const { loadLocalAISettings } = await import("@/lib/ai/preferences");
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(preferenceRemoveMock).toHaveBeenCalledWith({ key });
+    expect(preferenceValues.has(key)).toBe(false);
+  });
+
+  it("does not remove an absent local-AI setting on native", async () => {
+    capacitorState.isNative = true;
+    const { loadLocalAISettings } = await import("@/lib/ai/preferences");
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(preferenceRemoveMock).not.toHaveBeenCalled();
   });
 
   it("reads a native camera photo when running natively", async () => {

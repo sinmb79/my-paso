@@ -351,6 +351,41 @@ describe("local AI photo sanitizer", () => {
   });
 
   it.each([
+    (() => {
+      const bytes = webpVp8Bytes(1, 1);
+      setUint32LittleEndian(bytes, 16, 11);
+      return ["overdeclared VP8", bytes];
+    })(),
+    (() => {
+      const bytes = webpVp8lBytes(1, 1);
+      setUint32LittleEndian(bytes, 16, 7);
+      return ["overdeclared VP8L", bytes];
+    })(),
+    (() => {
+      const bytes = webpVp8xBytes(1, 1);
+      setUint32LittleEndian(bytes, 16, 12);
+      return ["overdeclared VP8X", bytes];
+    })(),
+    (() => {
+      const bytes = webpVp8xBytes(1, 1);
+      setUint32LittleEndian(bytes, 4, bytes.length);
+      return ["overdeclared RIFF container", bytes];
+    })(),
+    (() => ["truncated VP8L padding", webpVp8lBytes(1, 1).slice(0, -1)])(),
+    (() => {
+      const bytes = webpVp8xBytes(1, 1);
+      return ["padded trailing container", new Uint8Array([...bytes, 0])];
+    })(),
+  ])("rejects %s WebP before image assignment", async (_kind, bytes) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+
+    await expect(
+      sanitizePhotoForLocalAI(`data:image/webp;base64,${bytesToBase64(bytes)}`),
+    ).rejects.toThrow(/photo|dimension/i);
+    expect(assignedSources).toEqual([]);
+  });
+
+  it.each([
     ["JPEG SOF2", "data:image/jpeg;base64," + bytesToBase64(jpegBytes(2400, 1600, 0xc2))],
     ["WebP VP8", "data:image/webp;base64," + bytesToBase64(webpVp8Bytes(2400, 1600))],
     ["WebP VP8L", "data:image/webp;base64," + bytesToBase64(webpVp8lBytes(2400, 1600))],
@@ -439,18 +474,16 @@ describe("local AI photo sanitizer", () => {
   }
 
   function webpVp8xBytes(width: number, height: number) {
-    return new Uint8Array([
-      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
-      86, 80, 56, 88, 10, 0, 0, 0, 0, 0, 0, 0,
+    return webpRiff("VP8X", [
+      0, 0, 0, 0,
       ...uint24LittleEndian(width - 1),
       ...uint24LittleEndian(height - 1),
     ]);
   }
 
   function webpVp8Bytes(width: number, height: number) {
-    return new Uint8Array([
-      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
-      86, 80, 56, 32, 10, 0, 0, 0, 0, 0, 0,
+    return webpRiff("VP8 ", [
+      0, 0, 0,
       0x9d, 0x01, 0x2a,
       ...uint16LittleEndian(width),
       ...uint16LittleEndian(height),
@@ -459,14 +492,25 @@ describe("local AI photo sanitizer", () => {
 
   function webpVp8lBytes(width: number, height: number) {
     const dimensions = (width - 1) | ((height - 1) << 14);
-    return new Uint8Array([
-      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
-      86, 80, 56, 76, 5, 0, 0, 0, 0x2f,
+    return webpRiff("VP8L", [
+      0x2f,
       dimensions & 0xff,
       (dimensions >>> 8) & 0xff,
       (dimensions >>> 16) & 0xff,
       (dimensions >>> 24) & 0xff,
     ]);
+  }
+
+  function webpRiff(chunkType: string, payload: number[]) {
+    const paddedPayload = payload.length % 2 === 0 ? payload : [...payload, 0];
+    const bytes = new Uint8Array([
+      82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
+      ...Array.from(chunkType, (character) => character.charCodeAt(0)),
+      ...uint32LittleEndian(payload.length),
+      ...paddedPayload,
+    ]);
+    setUint32LittleEndian(bytes, 4, bytes.length - 8);
+    return bytes;
   }
 
   function uint16BigEndian(value: number) {
@@ -479,6 +523,14 @@ describe("local AI photo sanitizer", () => {
 
   function uint24LittleEndian(value: number) {
     return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff];
+  }
+
+  function uint32LittleEndian(value: number) {
+    return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff];
+  }
+
+  function setUint32LittleEndian(bytes: Uint8Array, offset: number, value: number) {
+    bytes.set(uint32LittleEndian(value), offset);
   }
 
   function uint32BigEndian(value: number) {
@@ -575,6 +627,52 @@ describe("local AI settings persistence", () => {
     );
 
     await expect(loadLocalAISettings()).resolves.toBeNull();
+  });
+
+  it.each([
+    "{",
+    JSON.stringify({ ...localAISettings(), endpoint: "http://user:password@127.0.0.1:8000" }),
+    JSON.stringify({ ...localAISettings(), endpoint: "http://8.8.8.8:8000" }),
+  ])("purges malformed or unsafe legacy web settings", async (legacyValue) => {
+    await saveLocalAISettings(localAISettings());
+    const key = localStorage.key(0);
+    if (!key) {
+      throw new Error("Local AI settings key was not persisted");
+    }
+    localStorage.setItem(key, legacyValue);
+    const removeSetting = vi.spyOn(nativePreferences, "removeSetting");
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(removeSetting).toHaveBeenCalledWith(key);
+    expect(localStorage.getItem(key)).toBeNull();
+    removeSetting.mockRestore();
+  });
+
+  it("does not remove an absent Local AI setting", async () => {
+    const removeSetting = vi.spyOn(nativePreferences, "removeSetting");
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(removeSetting).not.toHaveBeenCalled();
+    removeSetting.mockRestore();
+  });
+
+  it("returns null when legacy-setting removal fails without exposing its value", async () => {
+    await saveLocalAISettings(localAISettings());
+    const key = localStorage.key(0);
+    if (!key) {
+      throw new Error("Local AI settings key was not persisted");
+    }
+    localStorage.setItem(key, "{");
+    const removeSetting = vi
+      .spyOn(nativePreferences, "removeSetting")
+      .mockRejectedValueOnce(new Error("legacy cleanup failed"));
+
+    await expect(loadLocalAISettings()).resolves.toBeNull();
+
+    expect(removeSetting).toHaveBeenCalledWith(key);
+    removeSetting.mockRestore();
   });
 });
 

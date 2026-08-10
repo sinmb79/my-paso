@@ -8,14 +8,15 @@ const CAPABILITIES: readonly LocalAICapability[] = ["text", "vision"];
 
 export async function loadLocalAISettings(): Promise<LocalAISettings | null> {
   const stored = await nativePreferences.getSetting(LOCAL_AI_SETTINGS_KEY);
-  if (!stored) {
+  if (stored === null) {
     return null;
   }
 
   try {
-    return toLocalAISettings(JSON.parse(stored));
+    const settings = toLocalAISettings(JSON.parse(stored));
+    return settings ?? discardInvalidLocalAISettings();
   } catch {
-    return null;
+    return discardInvalidLocalAISettings();
   }
 }
 
@@ -30,6 +31,15 @@ export async function saveLocalAISettings(settings: LocalAISettings): Promise<vo
 
 export async function clearLocalAISettings(): Promise<void> {
   await nativePreferences.removeSetting(LOCAL_AI_SETTINGS_KEY);
+}
+
+async function discardInvalidLocalAISettings(): Promise<null> {
+  try {
+    await nativePreferences.removeSetting(LOCAL_AI_SETTINGS_KEY);
+  } catch {
+    // Invalid legacy data must not prevent the local-only app from loading.
+  }
+  return null;
 }
 
 function toLocalAISettings(value: unknown): LocalAISettings | null {

@@ -190,26 +190,71 @@ function readWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
   if (
     bytes.length < 20 ||
     readAscii(bytes, 0, 4) !== "RIFF" ||
-    readAscii(bytes, 8, 4) !== "WEBP"
+    readAscii(bytes, 8, 4) !== "WEBP" ||
+    readUint32LittleEndian(bytes, 4) !== bytes.length - 8
   ) {
     return null;
   }
 
-  const chunkType = readAscii(bytes, 12, 4);
+  let offset = 12;
+  let dimensions: ImageDimensions | null = null;
+  while (offset < bytes.length) {
+    if (offset + 8 > bytes.length) {
+      return null;
+    }
+    const chunkType = readAscii(bytes, offset, 4);
+    const chunkLength = readUint32LittleEndian(bytes, offset + 4);
+    const payloadOffset = offset + 8;
+    const availableBytes = bytes.length - payloadOffset;
+    const paddingBytes = chunkLength % 2;
+    if (
+      chunkLength > availableBytes ||
+      chunkLength > availableBytes - paddingBytes
+    ) {
+      return null;
+    }
+
+    const parsedDimensions = readWebpDimensionChunk(
+      chunkType,
+      bytes,
+      payloadOffset,
+      chunkLength,
+    );
+    if (parsedDimensions) {
+      if (dimensions) {
+        return null;
+      }
+      dimensions = parsedDimensions;
+    } else if (chunkType === "VP8 " || chunkType === "VP8L" || chunkType === "VP8X") {
+      return null;
+    }
+
+    offset = payloadOffset + chunkLength + paddingBytes;
+  }
+
+  return dimensions;
+}
+
+function readWebpDimensionChunk(
+  chunkType: string,
+  bytes: Uint8Array,
+  payloadOffset: number,
+  chunkLength: number,
+): ImageDimensions | null {
   if (chunkType === "VP8X") {
-    if (bytes.length < 30 || readUint32LittleEndian(bytes, 16) !== 10) {
+    if (chunkLength !== 10) {
       return null;
     }
     return {
-      width: readUint24LittleEndian(bytes, 24) + 1,
-      height: readUint24LittleEndian(bytes, 27) + 1,
+      width: readUint24LittleEndian(bytes, payloadOffset + 4) + 1,
+      height: readUint24LittleEndian(bytes, payloadOffset + 7) + 1,
     };
   }
   if (chunkType === "VP8L") {
-    if (bytes.length < 25 || readUint32LittleEndian(bytes, 16) < 5 || bytes[20] !== 0x2f) {
+    if (chunkLength < 5 || bytes[payloadOffset] !== 0x2f) {
       return null;
     }
-    const packed = readUint32LittleEndian(bytes, 21);
+    const packed = readUint32LittleEndian(bytes, payloadOffset + 1);
     return {
       width: (packed & 0x3fff) + 1,
       height: ((packed >>> 14) & 0x3fff) + 1,
@@ -217,17 +262,16 @@ function readWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
   }
   if (chunkType === "VP8 ") {
     if (
-      bytes.length < 30 ||
-      readUint32LittleEndian(bytes, 16) < 10 ||
-      bytes[23] !== 0x9d ||
-      bytes[24] !== 0x01 ||
-      bytes[25] !== 0x2a
+      chunkLength < 10 ||
+      bytes[payloadOffset + 3] !== 0x9d ||
+      bytes[payloadOffset + 4] !== 0x01 ||
+      bytes[payloadOffset + 5] !== 0x2a
     ) {
       return null;
     }
     return {
-      width: readUint16LittleEndian(bytes, 26) & 0x3fff,
-      height: readUint16LittleEndian(bytes, 28) & 0x3fff,
+      width: readUint16LittleEndian(bytes, payloadOffset + 6) & 0x3fff,
+      height: readUint16LittleEndian(bytes, payloadOffset + 8) & 0x3fff,
     };
   }
 
