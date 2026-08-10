@@ -222,30 +222,31 @@ export function ExploreTab({
           })}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:thin]">
+        <ul aria-label="장소 카테고리" className="flex flex-wrap gap-2 px-3 py-2">
           {categories.map((category) => {
             const active = activeCategory === category.id;
             return (
-              <button
-                key={category.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => {
-                  setActiveCategory(category.id);
-                  resetVisibleResults();
-                }}
-                className="h-11 shrink-0 rounded-full border px-3.5 text-xs font-bold transition"
-                style={{
-                  backgroundColor: active ? "var(--accent)" : "transparent",
-                  color: active ? "var(--accent-contrast)" : "var(--text-secondary)",
-                  borderColor: active ? "var(--accent)" : "var(--border)",
-                }}
-              >
-                {category.label}
-              </button>
+              <li key={category.id}>
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setActiveCategory(category.id);
+                    resetVisibleResults();
+                  }}
+                  className="h-11 rounded-full border px-3.5 text-xs font-bold transition"
+                  style={{
+                    backgroundColor: active ? "var(--accent)" : "transparent",
+                    color: active ? "var(--accent-contrast)" : "var(--text-secondary)",
+                    borderColor: active ? "var(--accent)" : "var(--border)",
+                  }}
+                >
+                  {category.label}
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
 
       <div className="mt-3 flex items-baseline justify-between">

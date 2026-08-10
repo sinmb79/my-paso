@@ -42,6 +42,26 @@ const places: PlaceSummary[] = [
 ];
 
 describe("ExploreTab", () => {
+  it("keeps every category in a wrapping filter list instead of hiding it horizontally", () => {
+    render(
+      <ExploreTab
+        pois={places}
+        selectedPoiId={null}
+        onSelectPoi={vi.fn()}
+        onToggleSaved={vi.fn()}
+        onUpdateTags={vi.fn()}
+        onShowOnMap={vi.fn()}
+        onToast={vi.fn()}
+      />,
+    );
+
+    const categoryList = screen.getByRole("list", { name: "장소 카테고리" });
+
+    expect(categoryList).toHaveClass("flex-wrap");
+    expect(categoryList).not.toHaveClass("overflow-x-auto");
+    expect(within(categoryList).getAllByRole("button")).toHaveLength(8);
+  });
+
   it("combines saved and nature filters in the compact accessible filter region", () => {
     const savedNaturePlaces = Array.from({ length: 26 }, (_, index) => ({
       ...places[1],
