@@ -106,6 +106,7 @@ describe("Paso 0.3.0 privacy copy", () => {
     const worksheet = read("docs/mobile/data-safety-0.3.0.md");
     const publishing = read("docs/mobile/store-publishing.md");
     const playGuide = read("docs/mobile/google-play-closed-testing.md");
+    const handoff = read("docs/mobile/TODO-when-you-wake-up.md");
 
     expect(privacy).toContain("Effective and last updated: 2026-08-11");
     expect(worksheet).toContain("기준일: 2026-08-11");
@@ -116,11 +117,20 @@ describe("Paso 0.3.0 privacy copy", () => {
     expect(playGuide).toContain("answer/17190352");
     expect(playGuide).toMatch(/개발자 프로그램 정책.*answer\/17190352/);
 
-    for (const copy of [publishing, playGuide]) {
+    for (const copy of [publishing, playGuide, handoff]) {
       expect(copy).toMatch(/현재 게시 버전[^\r\n]*0\.2\.0-alpha4/);
       expect(copy).toMatch(/검토 중[^\r\n]*0\.3\.0[^\r\n]*versionCode 6/);
       expect(copy).toContain("0.3.0-alpha1");
       expect(copy).toContain("검토 중인 변경사항");
     }
+
+    expect(handoff).toContain("빠른 검사 실행 중");
+    expect(worksheet).toContain("0.3.0-alpha1");
+    expect(worksheet).toContain("검토 중인 변경사항");
+    expect(worksheet).toContain("13개 변경사항");
+    expect(worksheet).toMatch(/공유[^\r\n]*No/);
+    expect(worksheet).toMatch(/전송 중 암호화[^\r\n]*Yes/);
+    expect(worksheet).toContain("R8/Proguard mapping 부재");
+    expect(worksheet).toContain("native debug symbols 부재");
   });
 });
