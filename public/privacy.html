@@ -40,46 +40,53 @@
   <h1>Hello! My Paso!</h1>
   <span class="badge">개인정보처리방침 / Privacy Policy</span>
 
-  <p class="notice"><strong>요약:</strong> 비공개 테스트 버전 0.2.0은 계정, 광고, 분석 SDK가 없으며 개발자 서버로 사용자 데이터를 수집하거나 공유하지 않습니다. 위치와 사진은 사용자가 기능을 직접 실행할 때만 기기 안에서 처리됩니다.</p>
+  <p class="notice"><strong>요약:</strong> 비공개 테스트 버전 0.3.0은 계정, 광고, 추적 또는 원격 분석이 없습니다. 기록은 기본적으로 기기에 저장됩니다. 선택적 로컬 AI를 사용할 때만 사용자가 전송 미리보기를 직접 확인한 장소 이름·메모와, 비전 모델인 경우 EXIF를 제거한 임시 사진 복사본이 사용자가 지정한 localhost 또는 확인된 사설망 엔드포인트로 전송됩니다.</p>
 
   <h2>1. 운영자 및 문의처</h2>
   <p>서비스 운영자: 22B Labs<br>문의: <a href="mailto:sinmb82@gmail.com">sinmb82@gmail.com</a></p>
 
-  <h2>2. 개발자가 수집하거나 공유하는 데이터</h2>
-  <p><strong>없습니다.</strong> Hello! My Paso!는 계정 가입을 요구하지 않으며, 사용자의 개인정보나 앱 사용 데이터를 개발자 서버로 전송하지 않습니다. 광고, 행동 추적, 원격 분석 도구도 포함하지 않습니다.</p>
+  <h2>2. 개발자와 선택적 로컬 AI</h2>
+  <p>Hello! My Paso!는 계정 가입을 요구하지 않고 광고, 행동 추적, 원격 분석 도구를 포함하지 않습니다. 22B Labs는 AI 엔드포인트를 운영하지 않으며 AI 요청을 수신, 보관 또는 열람하지 않습니다.</p>
+  <p>로컬 AI는 선택 사항이며 모델 가중치를 앱에 포함하지 않습니다. 사용자가 직접 소유하거나 신뢰하는 OpenAI 호환 실행기를 별도로 준비합니다. 앱은 이 기기의 HTTP/HTTPS <code>localhost</code>·loopback 또는 사용자가 정확한 주소를 다시 확인한 HTTPS 사설망 IPv4 주소만 허용합니다. HTTP 사설망, 공개 인터넷·클라우드·개발자 운영 엔드포인트는 차단하고 HTTPS 사설망만 확인 뒤 허용합니다.</p>
 
   <h2>3. 기기에 저장되는 데이터</h2>
-  <p>사용자가 앱에서 만든 프로필, 저장한 장소와 태그, 방문 기록, 수동/GPS 확인 상태, 방문 좌표, 리뷰, 사진, XP 및 설정은 앱 전용 로컬 저장소에 보관됩니다. 사진 파일은 앱 전용 미디어 영역에, 나머지 기록은 로컬 데이터베이스에 저장됩니다. 개발자는 이 데이터에 접근할 수 없습니다.</p>
+  <p>사용자가 앱에서 만든 프로필, 저장한 장소와 태그, 방문 기록, 수동/GPS 확인 상태, 방문 좌표, 리뷰, 사진, XP 및 설정은 기본적으로 앱 전용 로컬 저장소에 보관됩니다. 사진 파일은 앱 전용 미디어 영역에, 나머지 기록은 로컬 데이터베이스에 저장됩니다. 개발자는 이 로컬 데이터에 접근할 수 없습니다.</p>
 
   <h2>4. 권한과 네트워크</h2>
   <ul>
     <li><strong>위치:</strong> 사용자가 &ldquo;현재 위치 확인&rdquo;을 누른 경우에만 선택한 장소의 현장 방문 여부를 확인합니다. 백그라운드 위치를 수집하거나 추적하지 않습니다.</li>
-    <li><strong>카메라·사진:</strong> 사용자가 방문 사진을 추가할 때 촬영하거나 선택한 이미지에만 접근합니다.</li>
+    <li><strong>카메라·사진:</strong> 사용자가 방문 사진을 추가할 때 촬영하거나 선택한 이미지에만 접근합니다. AI 비전 기능을 명시적으로 실행하면 새 캔버스에서 EXIF와 사진 메타데이터를 제거하고 크기를 줄인 임시 JPEG 복사본만 요청에 사용합니다.</li>
     <li><strong>파일:</strong> 사용자가 요청한 JSON 백업을 문서 영역에 저장하고 공유 시트를 열기 위해 사용합니다.</li>
   </ul>
-  <p>100개의 번들 POI를 사용하므로 외부 공공 API 키 없이도 핵심 기능이 동작합니다. 장소 이름, 유형, 공개 좌표와 행정구역은 2026년 7월 19일 기준 <a href="https://www.wikidata.org/">Wikidata</a> 구조화 데이터 스냅샷이며 <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>으로 제공됩니다. 이는 사용자 데이터가 아니며, 런타임에 Wikidata로 개인 기록을 전송하지 않습니다. 인터넷 권한은 앱 콘텐츠 로드와 선택적 지도 기능에 사용되며, 개인 기록을 개발자 서버로 업로드하지 않습니다.</p>
+  <p>100개의 번들 POI를 사용하므로 외부 공공 API 키 없이도 핵심 기능이 동작합니다. 장소 이름, 유형, 공개 좌표와 행정구역은 2026년 7월 19일 기준 <a href="https://www.wikidata.org/">Wikidata</a> 구조화 데이터 스냅샷이며 <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>으로 제공됩니다. 이는 사용자 데이터가 아니며 런타임에 개인 기록을 Wikidata로 보내지 않습니다.</p>
 
-  <h2>5. 보관, 백업 및 삭제</h2>
+  <h2>5. AI 전송, 처리 및 사용자 확인</h2>
+  <p>AI 기록 도우미는 전송 미리보기를 먼저 표시하고, 사용자가 &ldquo;이 내용으로 AI 초안 만들기&rdquo;를 눌러 명시적으로 확인하기 전에는 요청하지 않습니다. 요청에는 선택한 장소 이름과 메모만 포함되며, 비전 모델인 경우 위의 임시 사진 복사본이 추가됩니다. 정확한 위치, 사진 메타데이터, 다른 기록과 백업 데이터는 항상 제외합니다.</p>
+  <p>HTTP <code>localhost</code>는 같은 기기 안의 loopback 연결이며 기기 밖 수집이 아닙니다. HTTPS 사설망 엔드포인트를 선택하면 데이터가 기기 밖으로 전송되고 해당 엔드포인트 운영자가 내용을 처리할 수 있으며, 전송 구간은 플랫폼 TLS로 암호화됩니다. HTTP 사설망은 차단합니다.</p>
+  <p>AI 결과는 편집 가능한 초안일 뿐이며 자동 저장, 동기화 또는 공유하지 않습니다. 사용자가 초안을 적용하고 일반 저장 동작을 완료해야만 로컬 기록에 반영됩니다. 오류나 취소가 발생해도 현재 입력은 유지됩니다.</p>
+
+  <h2>6. 보관, 백업 및 삭제</h2>
   <p>앱 데이터는 사용자가 앱 데이터를 지우거나 앱을 삭제할 때까지 기기에 남습니다. Android 클라우드 백업과 기기 간 자동 전송은 앱 설정에서 제외했습니다. JSON 백업에는 위치, 방문 기록, 태그와 사진 데이터가 포함될 수 있고 사용자가 선택한 위치에 별도로 저장되므로 사용자가 직접 관리하고 삭제해야 합니다.</p>
 
-  <h2>6. 보안</h2>
-  <p>데이터는 운영체제가 보호하는 앱 전용 영역에 저장됩니다. 백업은 체크섬과 참조 무결성을 검사하고 복원 실패 시 기존 로컬 기록을 유지합니다. 내보낸 JSON 파일은 별도로 암호화되지 않으며 위치와 사진을 포함할 수 있으므로 기기 잠금, 안전한 보관 및 신중한 공유를 권장합니다.</p>
+  <h2>7. 보안</h2>
+  <p>데이터는 운영체제가 보호하는 앱 전용 영역에 저장됩니다. 백업은 체크섬과 참조 무결성을 검사하고 복원 실패 시 기존 로컬 기록을 유지합니다. 내보낸 JSON 파일은 별도로 암호화되지 않으며 위치와 사진을 포함할 수 있으므로 기기 잠금, 안전한 보관 및 신중한 공유를 권장합니다. 기기 밖 AI 전송에는 HTTPS와 플랫폼 TLS를 적용하며 유효한 인증서의 신뢰하는 소유자 실행기만 사용해야 합니다.</p>
 
-  <h2>7. 아동의 개인정보</h2>
-  <p>앱은 누구의 개인정보도 개발자 서버로 수집하지 않으며, 아동의 개인정보를 고의로 수집하지 않습니다. 이번 Play 비공개 테스트의 대상 연령은 만 18세 이상입니다.</p>
+  <h2>8. 아동의 개인정보</h2>
+  <p>앱은 아동의 개인정보를 고의로 수집하지 않습니다. 이번 Play 비공개 테스트의 대상 연령은 만 18세 이상입니다.</p>
 
-  <h2>8. 변경 사항</h2>
+  <h2>9. 변경 사항</h2>
   <p>권한, 외부 전송, 계정, 분석 또는 동기화 방식이 달라지면 새 빌드를 배포하기 전에 데이터 안전성 신고와 본 방침을 실제 동작에 맞게 갱신합니다.</p>
 
   <hr>
 
   <h2>Privacy Policy (English)</h2>
   <p><strong>Operator:</strong> 22B Labs &middot; <a href="mailto:sinmb82@gmail.com">sinmb82@gmail.com</a></p>
-  <p>Hello! My Paso! closed-test version 0.2.0 requires no account and does not collect or share personal or app-usage data with developer servers. It contains no ads, tracking, or remote analytics.</p>
-  <p>Profiles, saved places and tags, visits, manual/GPS verification state, visit coordinates, reviews, photos, XP, and settings remain in app-private on-device storage. Location is accessed only when the user explicitly checks an on-site visit; background location is not collected. Camera or photo access occurs only when the user adds a visit photo. File access is used to write a user-requested backup and open the native share sheet.</p>
-  <p>Local data remains until the user clears app data or uninstalls the app. Android cloud backup and automatic device transfer are disabled. Exported JSON backups can include location and photo data, are not separately encrypted, and must be protected or deleted by the user.</p>
-  <p>The bundled 100 POIs let core features work without public API keys. Public place names, types, coordinates, and administrative labels come from a 19 July 2026 snapshot of <a href="https://www.wikidata.org/">Wikidata</a> structured data under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. These public place records are not user data, and the app does not send personal journal records to Wikidata or developer servers. Material changes to permissions, external transfers, accounts, analytics, or sync will be reflected in this policy and the store Data safety declaration before release.</p>
+  <p>Hello! My Paso! closed-test version 0.3.0 requires no account and contains no ads, tracking, or remote analytics. Journal data stays in app-private storage by default. Location is accessed only when the user explicitly checks an on-site visit; there is no background location tracking.</p>
+  <p>Local AI is optional and no model weights are bundled. The app permits HTTP/HTTPS <code>localhost</code> or loopback on this device, or an exact user-confirmed HTTPS private-LAN IPv4 endpoint. HTTP private-LAN, public-internet, cloud, and developer-operated endpoints are blocked; HTTPS private-LAN is allowed after confirmation. The developer does not operate an AI endpoint and does not receive, retain, or inspect AI requests.</p>
+  <p>Before any request, the app shows a transfer preview and requires explicit send confirmation. It sends only the selected place name and note plus, for a vision model, a resized temporary photo copy with EXIF removed. Precise location, photo metadata, other records, and backups are excluded. An HTTPS private-LAN request is an off-device transfer, its endpoint operator can process the content, and platform TLS encrypts it in transit. HTTP localhost is on-device and is not off-device collection.</p>
+  <p>AI output is an editable draft only and is never auto-saved, synchronized, or shared. Local data remains until the user clears app data or uninstalls the app. Android cloud backup and automatic device transfer are disabled. Exported JSON backups can include location and photo data, are not separately encrypted, and must be protected or deleted by the user.</p>
+  <p>The bundled 100 POIs come from a 19 July 2026 <a href="https://www.wikidata.org/">Wikidata</a> structured-data snapshot under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. Material changes to permissions, transfers, AI endpoints, accounts, analytics, or sync will be reflected in this policy and the Play Data safety declaration before release.</p>
 
-  <p class="updated">Effective and last updated: 2026-07-19</p>
+  <p class="updated">Effective and last updated: 2026-08-10</p>
 </body>
 </html>

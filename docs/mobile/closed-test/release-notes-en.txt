@@ -1,9 +1,10 @@
-Hello! My Paso! 0.2.0-alpha4 closed-test update.
+Hello! My Paso! 0.3.0 closed-test update.
 
-- Improved Android 15/16 edge-to-edge and system-bar insets
-- Stabilized input resizing when the keyboard opens
-- Updated the camera photo chooser for current Android behavior
-- Added themed app-icon support and cleaned Android build warnings
-- Applied Capacitor, Camera, and Next.js security and stability patches
+- Optional local AI drafts journal text, place classification, and keywords from selected photos and notes
+- HTTP/HTTPS localhost or an exact user-confirmed HTTPS private-LAN runtime is allowed; HTTP private-LAN, public, and cloud endpoints are blocked
+- Transfer preview and explicit confirmation, EXIF removal, and exclusion of precise location and unrelated records
+- AI output stays an editable draft and is never auto-saved, synchronized, or shared
+- Clearer place-distribution map, reduced marker overlap, and more compact Explore filters
+- Refined textures, contrast, keyboard focus, and small-screen accessibility
 
-Location and camera are used only when you choose those features. No accounts, ads, tracking, or analytics.
+AI is optional and no model is bundled. HTTPS private-LAN use is an off-device transfer; its operator can process the content and platform TLS encrypts it in transit. HTTP localhost stays on-device. The developer does not operate the AI runtime or receive, retain, or inspect requests.
