@@ -125,6 +125,53 @@ function createModel(): PasoJournalController {
   } as unknown as PasoJournalController;
 }
 
+async function enableTextAI() {
+  await saveLocalAISettings({
+    enabled: true,
+    vendor: "naver",
+    endpoint: "http://127.0.0.1:8000",
+    model: "local-korean-model",
+    capability: "text",
+    confirmedPrivateLANEndpoint: null,
+  });
+}
+
+function stubKeywordDraft(keywords: string[]) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: "태그 경계 기록",
+                  body: "키워드 저장 범위를 확인한다.",
+                  category: null,
+                  keywords,
+                  mood: null,
+                  altText: "",
+                  observations: [],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    ),
+  );
+}
+
+async function applyKeywordDraftAndRecord() {
+  fireEvent.click(await screen.findByRole("button", { name: "AI로 빠르게 작성" }));
+  fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+  expect(await screen.findByDisplayValue("태그 경계 기록")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "초안 적용" }));
+  fireEvent.click(screen.getByRole("button", { name: "방문 기록하기" }));
+}
+
 describe("JournalTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -407,7 +454,7 @@ describe("JournalTab", () => {
     expect(screen.getByText("저장 대기 키워드: 재시도")).toBeInTheDocument();
   });
 
-  it("does not delete a persisted visit photo when only the later keyword merge fails", async () => {
+  it("retries only failed AI keywords after a visit and photo persist exactly once", async () => {
     await saveLocalAISettings({
       enabled: true,
       vendor: "naver",
@@ -442,7 +489,10 @@ describe("JournalTab", () => {
       ),
     );
     const model = createModel();
-    vi.mocked(model.updatePoiTags).mockRejectedValue(new Error("태그 저장 실패"));
+    vi.mocked(model.updatePoiTags)
+      .mockRejectedValueOnce(new Error("태그 저장 실패"))
+      .mockResolvedValueOnce(undefined);
+    const onToast = vi.fn();
     mocks.takePhoto.mockResolvedValue("data:image/jpeg;base64,b3JpZ2luYWw=");
     mocks.saveJournalPhoto.mockResolvedValue({
       id: "persisted-photo.jpg",
@@ -452,7 +502,7 @@ describe("JournalTab", () => {
     render(
       <JournalTab
         model={model}
-        onToast={vi.fn()}
+        onToast={onToast}
         now={new Date("2026-07-19T12:00:00.000Z")}
       />,
     );
@@ -466,10 +516,104 @@ describe("JournalTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "방문 기록하기" }));
 
     await waitFor(() => expect(model.updatePoiTags).toHaveBeenCalledTimes(1));
-    expect(model.recordVisit).toHaveBeenCalledWith(
-      expect.objectContaining({ photoIds: ["persisted-photo.jpg"] }),
-    );
+    expect(model.recordVisit).toHaveBeenCalledTimes(1);
+    expect(mocks.saveJournalPhoto).toHaveBeenCalledTimes(1);
     expect(mocks.deleteJournalPhoto).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("방문 메모")).toHaveValue("");
+    expect(screen.queryByAltText("방문 사진 미리보기 1")).not.toBeInTheDocument();
     expect(screen.getByText("저장 대기 키워드: 태그재시도")).toBeInTheDocument();
+    expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/방문을 기록했어요/), "success");
+    expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/키워드/), "error");
+
+    fireEvent.click(screen.getByRole("button", { name: "AI 키워드 다시 저장" }));
+
+    await waitFor(() => expect(model.updatePoiTags).toHaveBeenCalledTimes(2));
+    expect(model.recordVisit).toHaveBeenCalledTimes(1);
+    expect(mocks.saveJournalPhoto).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "AI 키워드 다시 저장" })).not.toBeInTheDocument();
+  });
+
+  it("keeps eight existing tags, skips tag persistence, and shows the omitted AI keyword", async () => {
+    await enableTextAI();
+    stubKeywordDraft(["새 키워드"]);
+    const model = createModel();
+    model.selectedPoi = {
+      ...place,
+      tags: ["하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟"],
+    };
+
+    render(<JournalTab model={model} onToast={vi.fn()} />);
+    await applyKeywordDraftAndRecord();
+
+    await waitFor(() => expect(model.recordVisit).toHaveBeenCalledTimes(1));
+    expect(model.updatePoiTags).not.toHaveBeenCalled();
+    expect(screen.getByText("저장되지 않은 키워드: 새 키워드")).toBeInTheDocument();
+  });
+
+  it("fills only the last available tag slot and visibly omits the overflow keyword", async () => {
+    await enableTextAI();
+    stubKeywordDraft(["여덟째", "아홉째"]);
+    const model = createModel();
+    model.selectedPoi = {
+      ...place,
+      tags: ["하나", "둘", "셋", "넷", "다섯", "여섯", "일곱"],
+    };
+
+    render(<JournalTab model={model} onToast={vi.fn()} />);
+    await applyKeywordDraftAndRecord();
+
+    await waitFor(() =>
+      expect(model.updatePoiTags).toHaveBeenCalledWith(place.id, [
+        "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟째",
+      ]),
+    );
+    expect(screen.getByText("저장되지 않은 키워드: 아홉째")).toBeInTheDocument();
+  });
+
+  it("treats whitespace and case variants as existing tags without a redundant update", async () => {
+    await enableTextAI();
+    stubKeywordDraft(["  seoul   cafe  ", "SEOUL CAFE"]);
+    const model = createModel();
+    model.selectedPoi = { ...place, tags: ["Seoul Cafe"] };
+
+    render(<JournalTab model={model} onToast={vi.fn()} />);
+    await applyKeywordDraftAndRecord();
+
+    await waitFor(() => expect(model.recordVisit).toHaveBeenCalledTimes(1));
+    expect(model.updatePoiTags).not.toHaveBeenCalled();
+    expect(screen.queryByText(/저장되지 않은 키워드:/)).not.toBeInTheDocument();
+  });
+
+  it("persists an exact eight-tag result without reporting omissions", async () => {
+    await enableTextAI();
+    stubKeywordDraft(["일곱", "여덟"]);
+    const model = createModel();
+    model.selectedPoi = {
+      ...place,
+      tags: ["하나", "둘", "셋", "넷", "다섯", "여섯"],
+    };
+
+    render(<JournalTab model={model} onToast={vi.fn()} />);
+    await applyKeywordDraftAndRecord();
+
+    await waitFor(() =>
+      expect(model.updatePoiTags).toHaveBeenCalledWith(place.id, [
+        "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟",
+      ]),
+    );
+    expect(screen.queryByText(/저장되지 않은 키워드:/)).not.toBeInTheDocument();
+  });
+
+  it("renders AI persistence guidance at the 12px informational minimum", async () => {
+    await enableTextAI();
+    stubKeywordDraft(["열두픽셀"]);
+    render(<JournalTab model={createModel()} onToast={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "AI로 빠르게 작성" }));
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+    expect(await screen.findByDisplayValue("태그 경계 기록")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "초안 적용" }));
+
+    expect(screen.getByText(/분류와 사진 설명은 참고용/)).toHaveClass("text-xs");
   });
 });

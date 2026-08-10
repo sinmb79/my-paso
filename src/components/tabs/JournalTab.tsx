@@ -52,6 +52,48 @@ const categoryLabels = {
   custom: "직접 분류",
 };
 
+const MAX_POI_TAGS = 8;
+
+type KeywordMergePlan = {
+  tags: string[];
+  omitted: string[];
+  changed: boolean;
+};
+
+function normalizeTagName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function planKeywordMerge(existingTags: string[], pendingKeywords: string[]): KeywordMergePlan {
+  const tags: string[] = [];
+  const seen = new Set<string>();
+
+  for (const rawTag of existingTags) {
+    const tag = normalizeTagName(rawTag);
+    const key = tag.toLocaleLowerCase();
+    if (!tag || seen.has(key) || tags.length >= MAX_POI_TAGS) continue;
+    tags.push(tag);
+    seen.add(key);
+  }
+
+  const omitted: string[] = [];
+  let changed = false;
+  for (const rawKeyword of pendingKeywords) {
+    const keyword = normalizeTagName(rawKeyword);
+    const key = keyword.toLocaleLowerCase();
+    if (!keyword || seen.has(key)) continue;
+    seen.add(key);
+    if (tags.length < MAX_POI_TAGS) {
+      tags.push(keyword);
+      changed = true;
+    } else {
+      omitted.push(keyword);
+    }
+  }
+
+  return { tags, omitted, changed };
+}
+
 function createDraftId() {
   return `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -125,6 +167,9 @@ export function JournalTab({
   const [assistantTarget, setAssistantTarget] = useState<"memo" | "review">("memo");
   const [activeEditor, setActiveEditor] = useState<"memo" | "review">("memo");
   const [pendingKeywords, setPendingKeywords] = useState<string[]>([]);
+  const [omittedKeywords, setOmittedKeywords] = useState<string[]>([]);
+  const [keywordSaveError, setKeywordSaveError] = useState<string | null>(null);
+  const [keywordRetryPending, setKeywordRetryPending] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<LocalAIDraft["category"]>(null);
   const [suggestedAltText, setSuggestedAltText] = useState("");
   const [capturePending, setCapturePending] = useState(false);
@@ -213,13 +258,54 @@ export function JournalTab({
     }
   };
 
+  const persistPendingKeywords = async (keywords: string[], retry: boolean) => {
+    if (!selectedPoi) return false;
+
+    const plan = planKeywordMerge(selectedPoi.tags, keywords);
+    setOmittedKeywords(plan.omitted);
+    if (!plan.changed) {
+      setPendingKeywords([]);
+      setKeywordSaveError(null);
+      return true;
+    }
+
+    try {
+      await model.updatePoiTags(selectedPoi.id, plan.tags);
+      setPendingKeywords([]);
+      setKeywordSaveError(null);
+      if (retry) onToast("AI 키워드를 장소 태그에 저장했어요.", "success");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI 키워드를 저장하지 못했어요.";
+      setPendingKeywords(keywords);
+      setKeywordSaveError(message);
+      onToast(
+        retry
+          ? `AI 키워드를 다시 저장하지 못했어요. ${message}`
+          : `방문은 기록했지만 AI 키워드를 저장하지 못했어요. ${message}`,
+        "error",
+      );
+      return false;
+    }
+  };
+
+  const handleRetryKeywords = async () => {
+    if (pendingKeywords.length === 0 || keywordRetryPending) return;
+    setKeywordRetryPending(true);
+    try {
+      await persistPendingKeywords(pendingKeywords, true);
+    } finally {
+      setKeywordRetryPending(false);
+    }
+  };
+
   const handleRecordVisit = () => {
     if (!selectedPoi) return;
 
     startVisitTransition(() => {
       void (async () => {
         const committedPhotoIds: string[] = [];
-        let visitPersisted = false;
+        let earnedXp = 0;
         try {
           for (const photo of draftPhotos) {
             const committed = await saveJournalPhoto(photo.dataUrl);
@@ -243,29 +329,26 @@ export function JournalTab({
             photoIds: committedPhotoIds,
             verificationMode: verifiedPosition ? "gps" : "manual",
           });
-          visitPersisted = true;
-          if (pendingKeywords.length > 0) {
-            const mergedTags = Array.from(
-              new Set([
-                ...selectedPoi.tags,
-                ...pendingKeywords.map((keyword) => keyword.trim()).filter(Boolean),
-              ]),
-            );
-            await model.updatePoiTags(selectedPoi.id, mergedTags);
-          }
-          setMemo("");
-          setDraftPhotos([]);
-          setPendingKeywords([]);
-          setSuggestedCategory(null);
-          setSuggestedAltText("");
-          setLocationCheck({ status: "idle", distance: null, position: null });
-          onToast(`${selectedPoi.name} 방문을 기록했어요. +${visit.xp_earned} XP`, "success");
-          reviewSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+          earnedXp = visit.xp_earned;
         } catch (error) {
-          if (!visitPersisted) {
-            await Promise.allSettled(committedPhotoIds.map(deleteJournalPhoto));
-          }
+          await Promise.allSettled(committedPhotoIds.map(deleteJournalPhoto));
           throw error;
+        }
+
+        const keywordsToPersist = pendingKeywords;
+        setMemo("");
+        setDraftPhotos([]);
+        setSuggestedCategory(null);
+        setSuggestedAltText("");
+        setKeywordSaveError(null);
+        setLocationCheck({ status: "idle", distance: null, position: null });
+        onToast(`${selectedPoi.name} 방문을 기록했어요. +${earnedXp} XP`, "success");
+        reviewSectionRef.current?.scrollIntoView?.({ behavior: "smooth" });
+
+        if (keywordsToPersist.length > 0) {
+          await persistPendingKeywords(keywordsToPersist, false);
+        } else {
+          setOmittedKeywords([]);
         }
       })().catch((error: unknown) => {
         onToast(error instanceof Error ? error.message : "방문 기록에 실패했어요.", "error");
@@ -289,6 +372,8 @@ export function JournalTab({
       setMood(mappedMood.id);
     }
     setPendingKeywords(draft.keywords);
+    setOmittedKeywords([]);
+    setKeywordSaveError(null);
     setSuggestedCategory(draft.category);
     setSuggestedAltText(draft.altText.trim());
   };
@@ -318,7 +403,7 @@ export function JournalTab({
     <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-5" style={{ paddingBottom: "calc(var(--tab-height) + 1.25rem)" }}>
       <header className="relative overflow-hidden rounded-[1.75rem] border px-5 py-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
         <div className="absolute -bottom-12 -right-4 h-32 w-32 rounded-full opacity-70" style={{ background: "radial-gradient(circle, var(--accent-bg), transparent 70%)" }} />
-        <p className="relative text-[11px] font-black uppercase tracking-[0.22em]" style={{ color: "var(--accent)" }}>Private memory trail</p>
+        <p className="relative text-xs font-black uppercase tracking-[0.22em]" style={{ color: "var(--accent)" }}>Private memory trail</p>
         <h2 className="relative mt-1 text-2xl font-black tracking-tight" style={{ color: "var(--text-primary)" }}>오늘의 발자국을 남겨요</h2>
         <p className="relative mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>방문, 사진, 짧은 감상이 날짜를 따라 나만의 여행 기억이 됩니다.</p>
       </header>
@@ -422,13 +507,32 @@ export function JournalTab({
             </button>
           ) : null}
 
-          {(suggestedCategory || suggestedAltText || pendingKeywords.length > 0) ? (
+          {(suggestedCategory || suggestedAltText || pendingKeywords.length > 0 || omittedKeywords.length > 0 || keywordSaveError) ? (
             <aside className="mt-3 rounded-xl border px-3 py-3 text-xs leading-relaxed" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
               <p className="font-black" style={{ color: "var(--text-primary)" }}>AI 제안 · 저장 전</p>
               {suggestedCategory ? <p className="mt-1">제안 분류: {categoryLabels[suggestedCategory]}</p> : null}
               {suggestedAltText ? <p className="mt-1">사진 설명 제안: {suggestedAltText}</p> : null}
               {pendingKeywords.length > 0 ? <p className="mt-1">저장 대기 키워드: {pendingKeywords.join(" · ")}</p> : null}
-              <p className="mt-2 text-[11px]" style={{ color: "var(--text-tertiary)" }}>분류와 사진 설명은 참고용이며, 키워드는 방문 기록이 성공한 뒤에만 장소 태그에 합쳐집니다.</p>
+              {omittedKeywords.length > 0 ? (
+                <p className="mt-1 font-bold" style={{ color: "var(--warning, var(--accent))" }}>
+                  저장되지 않은 키워드: {omittedKeywords.join(" · ")}
+                </p>
+              ) : null}
+              {keywordSaveError ? (
+                <div className="mt-2 rounded-lg border px-3 py-2" style={{ borderColor: "var(--danger)", backgroundColor: "var(--danger-bg)" }}>
+                  <p role="alert">방문은 저장됐지만 AI 키워드는 아직 저장되지 않았어요. {keywordSaveError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleRetryKeywords()}
+                    disabled={keywordRetryPending}
+                    className="mt-2 min-h-11 rounded-xl border px-3 text-xs font-black disabled:opacity-40"
+                    style={{ borderColor: "var(--danger)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)" }}
+                  >
+                    {keywordRetryPending ? "키워드 저장 중..." : "AI 키워드 다시 저장"}
+                  </button>
+                </div>
+              ) : null}
+              <p className="mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>분류와 사진 설명은 참고용이며, 키워드는 방문 기록이 성공한 뒤에만 장소 태그에 합쳐집니다.</p>
             </aside>
           ) : null}
 

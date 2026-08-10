@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type {
   LocalAIDraft,
@@ -9,6 +10,7 @@ import type {
   LocalAIRequestPreview,
   LocalAISettings,
 } from "@/lib/ai/contracts";
+import { validateLocalAIEndpoint } from "@/lib/ai/endpoint-policy";
 import { sanitizePhotoForLocalAI } from "@/lib/ai/photo-sanitizer";
 import type { POICategory } from "@/types";
 
@@ -69,9 +71,12 @@ export function LocalAIAssistantSheet({
   const [selectedObservations, setSelectedObservations] = useState<boolean[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localPending, setLocalPending] = useState(false);
+  const [portalHost, setPortalHost] = useState<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const requestGenerationRef = useRef(0);
+  const cancellationNotifiedRef = useRef(false);
   const onCancelRef = useRef(onCancel);
   const onCloseRef = useRef(onClose);
   onCancelRef.current = onCancel;
@@ -79,37 +84,103 @@ export function LocalAIAssistantSheet({
 
   useEffect(() => {
     if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    cancellationNotifiedRef.current = false;
     setIntent("journal_draft");
     setDraft(null);
     setSelectedKeywords([]);
     setSelectedObservations([]);
     setLocalError(null);
     setLocalPending(false);
+
+    const host = document.createElement("div");
+    host.dataset.localAiDialogPortal = "";
+    document.body.appendChild(host);
+    setPortalHost(host);
+
+    return () => {
+      requestGenerationRef.current += 1;
+      if (!cancellationNotifiedRef.current) {
+        cancellationNotifiedRef.current = true;
+        onCancelRef.current();
+      }
+      host.remove();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !portalHost) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const backgroundChildren = Array.from(document.body.children).filter(
+      (child) => child !== portalHost,
+    );
+    const previousBackgroundState = backgroundChildren.map((element) => ({
+      element,
+      inert: element.getAttribute("inert"),
+      ariaHidden: element.getAttribute("aria-hidden"),
+    }));
+    for (const { element } of previousBackgroundState) {
+      element.setAttribute("inert", "");
+      element.setAttribute("aria-hidden", "true");
+    }
+
     closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
         requestGenerationRef.current += 1;
-        onCancelRef.current();
+        if (!cancellationNotifiedRef.current) {
+          cancellationNotifiedRef.current = true;
+          onCancelRef.current();
+        }
         onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.tabIndex >= 0);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeElement = document.activeElement;
+      if (event.shiftKey && (activeElement === first || !dialogRef.current?.contains(activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (activeElement === last || !dialogRef.current?.contains(activeElement))) {
+        event.preventDefault();
+        first.focus();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      requestGenerationRef.current += 1;
       document.removeEventListener("keydown", handleKeyDown);
+      for (const { element, inert, ariaHidden } of previousBackgroundState) {
+        if (inert === null) element.removeAttribute("inert");
+        else element.setAttribute("inert", inert);
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      }
       previousFocusRef.current?.focus();
     };
-  }, [open]);
+  }, [open, portalHost]);
 
-  if (!open) return null;
+  if (!open || !portalHost) return null;
 
   const includesPhoto = settings.capability === "vision" && Boolean(photoDataUrl);
   const displayedError = localError ?? error;
   const isGenerating = loading || localPending;
-  const scopeLabel = settings.confirmedPrivateLANEndpoint
+  const endpointValidation = validateLocalAIEndpoint(
+    settings.endpoint,
+    settings.confirmedPrivateLANEndpoint,
+  );
+  const isPrivateLan = endpointValidation.ok && endpointValidation.scope === "private_lan";
+  const scopeLabel = isPrivateLan
     ? "내가 승인한 사설망 기기"
     : "이 기기 또는 브라우저의 localhost";
   const moodOptions = draft?.mood && !knownMoodLabels.includes(draft.mood)
@@ -119,7 +190,10 @@ export function LocalAIAssistantSheet({
   const cancelGeneration = () => {
     requestGenerationRef.current += 1;
     setLocalPending(false);
-    onCancel();
+    if (!cancellationNotifiedRef.current) {
+      cancellationNotifiedRef.current = true;
+      onCancel();
+    }
   };
 
   const close = () => {
@@ -128,6 +202,7 @@ export function LocalAIAssistantSheet({
   };
 
   const generate = async () => {
+    cancellationNotifiedRef.current = false;
     const generation = ++requestGenerationRef.current;
     setLocalError(null);
     setDraft(null);
@@ -169,10 +244,15 @@ export function LocalAIAssistantSheet({
       keywords: draft.keywords.filter((_, index) => selectedKeywords[index]),
       observations: draft.observations.filter((_, index) => selectedObservations[index]),
     });
+    requestGenerationRef.current += 1;
+    if (!cancellationNotifiedRef.current) {
+      cancellationNotifiedRef.current = true;
+      onCancel();
+    }
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       style={{ zIndex: 70 }}
@@ -181,6 +261,7 @@ export function LocalAIAssistantSheet({
       }}
     >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="local-ai-dialog-title"
@@ -190,7 +271,7 @@ export function LocalAIAssistantSheet({
       >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
+            <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
               Owner-controlled local AI
             </p>
             <h2 id="local-ai-dialog-title" className="mt-1 text-xl font-black" style={{ color: "var(--text-primary)" }}>
@@ -252,6 +333,23 @@ export function LocalAIAssistantSheet({
               {settings.endpoint}
             </p>
             <p className="mt-2 text-xs font-black" style={{ color: "var(--accent)" }}>{scopeLabel}</p>
+            {isPrivateLan ? (
+              <div className="mt-2 space-y-2 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                <p>
+                  장소 “{placeName || "선택한 장소 없음"}”와 메모 “{note || "작성한 메모 없음"}”는 이 기기 밖으로 전송됩니다. 표시된 엔드포인트 {settings.endpoint}로 이동합니다.
+                </p>
+                {includesPhoto ? (
+                  <p>
+                    EXIF를 제거하고 크기를 줄인 임시 사진도 이 기기 밖으로 전송되며 {settings.endpoint}에서 처리됩니다.
+                  </p>
+                ) : null}
+                <p>엔드포인트 운영자가 이 내용을 처리할 수 있습니다.</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                선택한 내용은 이 기기의 loopback 연결 안에서만 처리됩니다.
+              </p>
+            )}
             <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
               엔드포인트 운영자가 전송 내용을 볼 수 있어요. 본인이 소유하거나 신뢰하는 기기인지 확인해 주세요.
             </p>
@@ -286,7 +384,7 @@ export function LocalAIAssistantSheet({
                   />
                   <span>
                     <span className="block text-sm font-black" style={{ color: "var(--text-primary)" }}>{item.label}</span>
-                    <span className="mt-0.5 block text-[11px] leading-snug" style={{ color: "var(--text-tertiary)" }}>{item.description}</span>
+                    <span className="mt-0.5 block text-xs leading-snug" style={{ color: "var(--text-tertiary)" }}>{item.description}</span>
                   </span>
                 </label>
               ))}
@@ -318,7 +416,7 @@ export function LocalAIAssistantSheet({
           <section className="mt-5 rounded-2xl border p-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)" }}>
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-black" style={{ color: "var(--text-primary)" }}>AI 초안</h3>
-              <span className="rounded-full px-2.5 py-1 text-[11px] font-black" style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}>적용 전 · 기기 메모리</span>
+              <span className="rounded-full px-2.5 py-1 text-xs font-black" style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}>적용 전 · 기기 메모리</span>
             </div>
             <div className="mt-4 grid gap-4">
               <label className="text-xs font-black" style={{ color: "var(--text-secondary)" }}>
@@ -394,6 +492,7 @@ export function LocalAIAssistantSheet({
           )}
         </div>
       </section>
-    </div>
+    </div>,
+    portalHost,
   );
 }

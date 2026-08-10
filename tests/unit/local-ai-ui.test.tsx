@@ -183,6 +183,188 @@ describe("LocalAIAssistantSheet", () => {
     expect(onGenerate).not.toHaveBeenCalled();
   });
 
+  it("aborts lifecycle work when unmounted during transient photo sanitization", async () => {
+    const sanitizing = deferred<string>();
+    assistantSheetMocks.sanitizePhotoForLocalAI.mockReturnValueOnce(sanitizing.promise);
+    const onGenerate = vi.fn().mockResolvedValue(generatedDraft);
+    const onCancel = vi.fn();
+    const { unmount } = render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="언마운트 뒤에는 보내지 않을 메모"
+        photoDataUrl="data:image/jpeg;base64,b3JpZ2luYWw="
+        settings={visionSettings}
+        loading={false}
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={onCancel}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+    await waitFor(() => expect(assistantSheetMocks.sanitizePhotoForLocalAI).toHaveBeenCalledTimes(1));
+    unmount();
+    sanitizing.resolve("data:image/jpeg;base64,c2FuaXRpemVk");
+
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
+
+  it("aborts an already-started fetch signal when the sheet unmounts", async () => {
+    const request = new AbortController();
+    const onGenerate = vi.fn(
+      () =>
+        new Promise<LocalAIDraft>((_resolve, reject) => {
+          request.signal.addEventListener("abort", () => reject(request.signal.reason));
+        }),
+    );
+    const onCancel = vi.fn(() => request.abort(new DOMException("cancelled", "AbortError")));
+    const { unmount } = render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="요청 중인 메모"
+        photoDataUrl={null}
+        settings={savedSettings()}
+        loading={false}
+        error={null}
+        onGenerate={onGenerate}
+        onCancel={onCancel}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
+    await waitFor(() => expect(onGenerate).toHaveBeenCalledTimes(1));
+    unmount();
+
+    expect(request.signal.aborted).toBe(true);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("portals the modal, makes the background inert, traps focus, and restores exact state", async () => {
+    const onCancel = vi.fn();
+    const onClose = vi.fn();
+    const { container, rerender } = render(
+      <>
+        <button type="button">시트 열기 버튼</button>
+        <LocalAIAssistantSheet
+          open={false}
+          placeName="고요한 궁궐"
+          note="메모"
+          photoDataUrl={null}
+          settings={savedSettings()}
+          loading={false}
+          error={null}
+          onGenerate={vi.fn().mockResolvedValue(generatedDraft)}
+          onCancel={onCancel}
+          onClose={onClose}
+          onApply={vi.fn()}
+        />
+      </>,
+    );
+    container.setAttribute("aria-hidden", "false");
+    container.setAttribute("inert", "legacy");
+    const trigger = screen.getByRole("button", { name: "시트 열기 버튼" });
+    trigger.focus();
+
+    rerender(
+      <>
+        <button type="button">시트 열기 버튼</button>
+        <LocalAIAssistantSheet
+          open
+          placeName="고요한 궁궐"
+          note="메모"
+          photoDataUrl={null}
+          settings={savedSettings()}
+          loading={false}
+          error={null}
+          onGenerate={vi.fn().mockResolvedValue(generatedDraft)}
+          onCancel={onCancel}
+          onClose={onClose}
+          onApply={vi.fn()}
+        />
+      </>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "로컬 AI 기록 도우미" });
+    expect(dialog.parentElement?.parentElement?.parentElement).toBe(document.body);
+    expect(container).toHaveAttribute("inert", "");
+    expect(container).toHaveAttribute("aria-hidden", "true");
+    const first = screen.getByRole("button", { name: "닫기" });
+    const last = screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" });
+    expect(first).toHaveFocus();
+
+    first.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(last).toHaveFocus();
+    last.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(first).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    rerender(
+      <>
+        <button type="button">시트 열기 버튼</button>
+        <LocalAIAssistantSheet
+          open={false}
+          placeName="고요한 궁궐"
+          note="메모"
+          photoDataUrl={null}
+          settings={savedSettings()}
+          loading={false}
+          error={null}
+          onGenerate={vi.fn().mockResolvedValue(generatedDraft)}
+          onCancel={onCancel}
+          onClose={onClose}
+          onApply={vi.fn()}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(container).toHaveAttribute("inert", "legacy");
+    expect(container).toHaveAttribute("aria-hidden", "false");
+    expect(trigger).toHaveFocus();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("warns that selected content leaves this device for a private-LAN operator", async () => {
+    const lanSettings: LocalAISettingsValue = {
+      ...visionSettings,
+      endpoint: "http://192.168.0.20:8000",
+      confirmedPrivateLANEndpoint: "http://192.168.0.20:8000",
+    };
+    render(
+      <LocalAIAssistantSheet
+        open
+        placeName="고요한 궁궐"
+        note="사설망으로 보낼 메모"
+        photoDataUrl="data:image/jpeg;base64,b3JpZ2luYWw="
+        settings={lanSettings}
+        loading={false}
+        error={null}
+        onGenerate={vi.fn().mockResolvedValue(generatedDraft)}
+        onCancel={vi.fn()}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/이 기기 밖으로 전송됩니다/)).toHaveTextContent(
+      "사설망으로 보낼 메모",
+    );
+    expect(screen.getByText(/EXIF를 제거하고 크기를 줄인 임시 사진/)).toHaveTextContent(
+      "http://192.168.0.20:8000",
+    );
+    expect(screen.getByText(/엔드포인트 운영자가 이 내용을 처리할 수 있습니다/)).toBeInTheDocument();
+  });
+
   it("supports loading cancellation and an in-place retry without losing the preview", () => {
     const onCancel = vi.fn();
     const onGenerate = vi.fn();
@@ -248,8 +430,10 @@ describe("LocalAIAssistantSheet", () => {
       />,
     );
 
+    expect(screen.getByText("제목과 본문을 다듬어요")).toHaveClass("text-xs");
     fireEvent.click(screen.getByRole("button", { name: "이 내용으로 AI 초안 만들기" }));
     expect(await screen.findByDisplayValue("돌담의 오후")).toBeInTheDocument();
+    expect(screen.getByText("적용 전 · 기기 메모리")).toHaveClass("text-xs");
     fireEvent.change(screen.getByLabelText("AI 제안 제목"), { target: { value: "수정한 제목" } });
     fireEvent.change(screen.getByLabelText("AI 제안 본문"), { target: { value: "수정한 본문" } });
     fireEvent.change(screen.getByLabelText("AI 제안 장소 분류"), { target: { value: "nature" } });
