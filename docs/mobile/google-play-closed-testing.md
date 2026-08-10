@@ -1,11 +1,11 @@
 # Google Play 비공개 테스트 실행 가이드
 
-기준일: 2026-08-10
+기준일: 2026-08-11
 앱 ID: com.mypaso.app
-현재 게시 버전: 0.2.0 (versionCode 3)
-현재 출시명: 0.2.0-alpha2
-검토 중 업데이트: 0.2.0 (versionCode 4)
-검토 중 출시명: 0.2.0-alpha3
+현재 게시 버전: 0.2.0 (versionCode 4)
+현재 출시명: 0.2.0-alpha3
+검토 중 업데이트: 0.2.0 (versionCode 5, 2026-07-30 제출)
+검토 중 출시명: 0.2.0-alpha4
 다음 후보: 0.3.0 (versionCode 6 예정, 업로드 전 Console에서 미사용 여부 재확인)
 
 ## 공식 요건 확인
@@ -24,7 +24,7 @@
 - [사용자 데이터 정책](https://support.google.com/googleplay/android-developer/answer/10144311)
 - [명확한 공개와 동의 권장사항](https://support.google.com/googleplay/android-developer/answer/11150561)
 - [스토어 미리보기 에셋 요건](https://support.google.com/googleplay/android-developer/answer/9866151?hl=ko)
-- [개인정보처리방침 요건](https://support.google.com/googleplay/android-developer/answer/17105854?hl=ko)
+- [Google Play 개발자 프로그램 정책](https://support.google.com/googleplay/android-developer/answer/17190352)
 
 ## 1. 검증된 업로드 파일
 
@@ -36,7 +36,7 @@ PowerShell에서 다시 만들 때:
 
     android/app/build/outputs/bundle/release/app-release.aab
 
-현재 게시된 alpha2 검증값:
+과거 alpha2/versionCode 3 검증값:
 
 | 항목 | 값 |
 |---|---|
@@ -54,11 +54,11 @@ PowerShell에서 다시 만들 때:
     C:\Users\sinmb\key\my-paso-upload.keystore
     C:\Users\sinmb\key\my-paso-upload.properties
 
-다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없으므로 4 이상으로 증가시킵니다.
+다음 업데이트는 Play가 사용한 versionCode를 재사용할 수 없습니다. versionCode 5가 이미 제출됐으므로 0.3.0 후보는 Console에서 미사용을 재확인한 versionCode 6을 사용합니다.
 
-실제 POI 교체를 포함한 다음 후보는 versionCode 4로 빌드·서명했습니다.
+실제 POI 교체판은 versionCode 4로 빌드·서명됐고 현재 Alpha에 게시됐습니다.
 
-| 항목 | versionCode 4 후보 |
+| 항목 | versionCode 4 현재 게시본 |
 |---|---|
 | AAB 크기 | 7,019,128 bytes |
 | AAB SHA-256 | FEE02729F0029B3778351662A653C8B428F70F68897AA771E136580CAA7E8A71 |
@@ -66,6 +66,17 @@ PowerShell에서 다시 만들 때:
 | APK SHA-256 | 8B329E9AEE745890831299CD2DB323AC701CA99F2FAF0F8A76B757199AC91290 |
 | Bundletool validate | 통과 |
 | AAB 내부 데이터 | Wikidata QID 100개, 더미 ID 0개 |
+
+2026-07-30 제출된 alpha4/versionCode 5:
+
+| 항목 | versionCode 5 제출본 |
+|---|---|
+| 출시명 | 0.2.0-alpha4 |
+| AAB 크기 | 7,893,340 bytes |
+| AAB SHA-256 | 445E51A2D4FC07CE9DC5A860FDE91AA8B07AAB03FC60FAAAA78AC8EB85D5A5B9 |
+| target SDK | API 36 |
+| Bundletool / jarsigner | 통과 |
+| Play 상태 | 검토 중인 변경사항, 승인 후 자동 출시 |
 
 ## 2. 앱 콘텐츠와 데이터 보안
 
@@ -108,15 +119,15 @@ store-assets/store-listing.txt의 국문을 기본 등록정보에 입력하고 
 
 ## 4. 비공개 테스트 버전 업데이트
 
-0.2.0-alpha2 versionCode 3은 게시 완료됐습니다. 실제 POI 교체판인 0.2.0-alpha3 versionCode 4는 2026-07-19 같은 Alpha 트랙에 100% 출시로 제출했으며 현재 Google 검토 중입니다. 기존 테스터 트랙을 유지하므로 옵트인 운영은 계속됩니다.
+0.2.0-alpha3 versionCode 4는 현재 Alpha에 100% 게시됐습니다. Android 15·16 보완판인 0.2.0-alpha4 versionCode 5는 2026-07-30 같은 Alpha 트랙에 제출됐고 현재 `검토 중인 변경사항` 상태입니다. 관리형 게시를 사용하지 않으므로 승인되면 자동 출시됩니다.
 
 1. 완료: Play Console의 비공개 테스트 Alpha 트랙과 대한민국 대상 국가 1개를 확인했습니다.
-2. 완료: versionCode 4 `app-release.aab`를 업로드했습니다.
-3. 완료: 출시명을 `0.2.0-alpha3`로 지정했습니다.
+2. 완료: versionCode 5 `app-release.aab`를 업로드했습니다.
+3. 완료: 출시명을 `0.2.0-alpha4`로 지정했습니다.
 4. 완료: `closed-test/release-notes-ko.txt`와 `release-notes-en.txt`를 입력하고 2개 언어 제공을 확인했습니다.
 5. 완료: 자동 검사를 통과하고 권한·데이터 보안과 기기 지원 변화를 검토했습니다.
 6. 완료: 100% 출시 변경사항 1건을 Google 검토에 전송했습니다.
-7. 남음: 검토 승인 후 Alpha 자동 게시와 테스터 배포 상태를 확인합니다.
+7. 남음: versionCode 5 검토 승인 후 Alpha 자동 게시와 테스터 배포 상태를 확인합니다.
 
 ### 0.3.0 업데이트 체크
 
@@ -141,7 +152,7 @@ Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역�
 
     https://play.google.com/apps/testing/com.mypaso.app
 
-2026-07-19 Play 대시보드에서 `12명 이상의 테스터가 옵트인함` 조건은 완료 표시됐습니다. `12명 이상이 14일 연속 참여` 조건은 아직 진행 중이며, 테스터가 중간에 옵트아웃하지 않도록 유지합니다.
+이전 2026-07-19 대시보드에는 `12명 이상의 테스터가 옵트인함`이 표시됐지만, 더 최신인 2026-07-30 alpha4 제출 증거에는 현재 Alpha에서 사용 가능 사용자 수가 0명으로 표시됐습니다. Console에서 실제 초대 목록·옵트인·사용 가능 사용자를 다시 확인하고, 최소 12명의 14일 연속 참여를 새 증거로 기록합니다.
 
 ## 6. 14일 운영표
 

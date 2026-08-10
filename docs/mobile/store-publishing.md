@@ -1,20 +1,20 @@
 # 모바일 스토어 배포 현황
 
-기준일: 2026-08-10
+기준일: 2026-08-11
 
 ## Android 비공개 테스트 현황
 
 | 항목 | 상태 | 위치 또는 기준 |
 |---|---|---|
 | 패키지 ID | 준비 | com.mypaso.app |
-| 현재 게시 버전 | 게시 완료 | 0.2.0 / versionCode 3 |
-| 현재 출시명 | Alpha 활성 | 0.2.0-alpha2 |
-| 검토 중 업데이트 | Google 검토 중 | 0.2.0 / versionCode 4 |
-| 검토 중 출시명 | Alpha 제출 완료 | 0.2.0-alpha3 |
+| 현재 게시 버전 | 게시 완료 | 0.2.0 / versionCode 4 |
+| 현재 출시명 | Alpha 활성 | 0.2.0-alpha3 |
+| 검토 중 업데이트 | 2026-07-30 제출·Google 검토 중 | 0.2.0 / versionCode 5 |
+| 검토 중 출시명 | Alpha 제출 완료 | 0.2.0-alpha4 |
 | 0.3.0 후보 | 로컬 검증·정책 동기화 중 | versionCode 6 예정, Console 미업로드 |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
-| App Bundle | v4 서명·검증 완료 | android/app/build/outputs/bundle/release/app-release.aab |
-| 릴리스 APK | v4 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
+| App Bundle | v5 서명·검증·Play 업로드 완료 | android/app/build/outputs/bundle/release/app-release.aab |
+| 릴리스 APK | 직전 v4 서명·업데이트 설치 검증 완료 | android/app/build/outputs/apk/release/app-release.apk |
 | 업로드 키 | 저장소 밖으로 분리 | C:\Users\sinmb\key |
 | 런타임 권한 | 최소화 | 포그라운드 위치, 카메라 |
 | 백그라운드 위치 | 미요청 | AndroidManifest 확인 |
@@ -23,11 +23,21 @@
 | 스토어 등록정보 | 국문·영문 준비 | store-assets/store-listing.txt |
 | 이미지 | 실제 앱 화면으로 준비 | store-assets 폴더 |
 | 테스트 운영 자료 | 준비 | closed-test 폴더 |
-| Play Console alpha2 | 게시 완료 | 0.2.0-alpha2 100%, Alpha 활성 |
-| Play Console alpha3 | 검토 중 | 0.2.0-alpha3 100%, versionCode 4 |
-| 테스터 조건 | 일부 완료 | 12명 이상 옵트인 완료, 14일 연속 참여 진행 중 |
+| Play Console alpha3 | 게시 완료 | 0.2.0-alpha3 100%, versionCode 4, Alpha 활성 |
+| Play Console alpha4 | 검토 중 | 0.2.0-alpha4 100%, versionCode 5, 2026-07-30 제출 |
+| 테스터 조건 | 재확인 필요 | 2026-07-30 Console 증거에서 현재 Alpha 사용 가능 사용자 0명 |
 
-## 최종 로컬 검증
+## 제출된 v5 검증 — 2026-07-30
+
+- 출시명: `0.2.0-alpha4`, versionCode 5, target SDK 36
+- AAB SHA-256: `445E51A2D4FC07CE9DC5A860FDE91AA8B07AAB03FC60FAAAA78AC8EB85D5A5B9`
+- AAB 크기: 7,893,340 bytes
+- Bundletool 구조 검증과 jarsigner 서명 검증: 통과
+- Android `testDebugUnitTest`, `lintRelease`(`No issues found`), API 35·36 에뮬레이터 확인: 통과
+- Play 상태: 비공개 테스트 Alpha 100%, `검토 중인 변경사항`, 승인 후 자동 출시
+- Source of truth: `closed-test/evidence/report-0.2.0-alpha4.md`
+
+## 현재 게시 v4의 역사 로컬 검증
 
 - AAB SHA-256: FEE02729F0029B3778351662A653C8B428F70F68897AA771E136580CAA7E8A71
 - AAB 크기: 7,019,128 bytes
@@ -45,7 +55,7 @@
 - Play 지원 기기 변화: 전화·태블릿을 포함한 모든 폼 팩터에서 제외 0대
 - Play 검증 경고: 난독화를 사용하지 않는 빌드의 가독화 파일 부재 1건(비차단)
 
-현재 v4의 세부 명령, 기기 프로필, 해시와 화면 증거는 closed-test/evidence/report-0.2.0-alpha3.md에 기록했습니다. report-0.2.0.md는 현재 게시된 alpha2의 역사 기록입니다.
+현재 게시된 v4의 세부 명령, 기기 프로필, 해시와 화면 증거는 closed-test/evidence/report-0.2.0-alpha3.md에 기록했습니다. 2026-07-30 제출된 v5의 서명 AAB, 해시, Android 15·16 검증과 Play 상태는 closed-test/evidence/report-0.2.0-alpha4.md가 source of truth입니다. report-0.2.0.md는 이전 출시의 역사 기록입니다.
 
 ## Play Console 데이터 보안 기준
 
@@ -72,16 +82,17 @@
 
 ## Play Console에서 남은 절차
 
-1. 완료: 0.2.0 (versionCode 3) AAB를 비공개 테스트 Alpha 트랙에 업로드했습니다.
+1. 완료: 0.2.0 (versionCode 4, `0.2.0-alpha3`)이 비공개 테스트 Alpha의 현재 게시 버전입니다.
 2. 완료: 권한, 데이터 보안, 앱 액세스, 콘텐츠 등급과 타겟층 답변을 확인했습니다.
 3. 완료: 국문·영문 등록정보와 아이콘, 그래픽, 휴대전화·태블릿 스크린샷을 등록했습니다.
 4. 완료: 0.2.0-alpha2 100% 출시안과 등록정보 변경 3건을 Google 검토에 제출했습니다.
 5. 완료: Google 승인 후 0.2.0-alpha2 Alpha 트랙 자동 게시와 활성 상태를 확인했습니다.
 6. 완료: Play 대시보드에서 12명 이상 옵트인 조건을 확인했습니다. `젤리테스터` 이메일 목록은 44명입니다.
-7. 완료: versionCode 4 실제 POI 업데이트를 `0.2.0-alpha3` 100% 출시로 같은 Alpha 트랙에 업로드하고 Google 검토에 제출했습니다.
-8. 남음: Google 검토 승인과 Alpha 트랙 자동 게시를 확인합니다.
-9. 남음: 최소 12명의 14일 연속 옵트인을 유지하고 실제 미션·피드백·수정 증거를 기록합니다.
-10. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
+7. 완료: versionCode 4 실제 POI 업데이트 `0.2.0-alpha3`가 승인되어 현재 Alpha에 게시됐습니다.
+8. 완료: 2026-07-30 versionCode 5 `0.2.0-alpha4`를 100% Alpha 출시로 업로드하고 Google 검토에 제출했습니다.
+9. 남음: `0.2.0-alpha4`의 `검토 중인 변경사항`이 승인되어 자동 게시되는지 확인합니다.
+10. 남음: Console에서 현재 사용 가능 사용자와 옵트인을 다시 확인하고 최소 12명의 14일 연속 참여 및 미션·피드백 증거를 기록합니다.
+11. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
 
 ## 공개 출시 전 필수 게이트
 

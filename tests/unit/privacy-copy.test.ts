@@ -91,4 +91,27 @@ describe("Paso 0.3.0 privacy copy", () => {
     expect(testerCopy).toMatch(/HTTPS 사설망[\s\S]*(?:확인|허용)/);
     expect(testerCopy).toMatch(/실패[\s\S]*(?:입력|기록|내용)[\s\S]*유지/);
   });
+
+  it("pins the publication date, current policy URL, and Play release state", () => {
+    const privacy = read("public/privacy.html");
+    const worksheet = read("docs/mobile/data-safety-0.3.0.md");
+    const publishing = read("docs/mobile/store-publishing.md");
+    const playGuide = read("docs/mobile/google-play-closed-testing.md");
+
+    expect(privacy).toContain("Effective and last updated: 2026-08-11");
+    expect(worksheet).toContain("기준일: 2026-08-11");
+    expect(publishing).toContain("기준일: 2026-08-11");
+    expect(playGuide).toContain("기준일: 2026-08-11");
+
+    expect(playGuide).not.toContain("answer/17105854");
+    expect(playGuide).toContain("answer/17190352");
+    expect(playGuide).toMatch(/개발자 프로그램 정책.*answer\/17190352/);
+
+    for (const copy of [publishing, playGuide]) {
+      expect(copy).toMatch(/2026-07-30/);
+      expect(copy).toMatch(/현재[^\r\n]*(?:Alpha|게시)[^\r\n]*(?:0\.2\.0-alpha3|versionCode 4)/);
+      expect(copy).toMatch(/(?:제출|검토 중)[^\r\n]*(?:0\.2\.0-alpha4|versionCode 5)/);
+      expect(copy).toMatch(/0\.3\.0[^\r\n]*versionCode 6/);
+    }
+  });
 });
