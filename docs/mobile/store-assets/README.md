@@ -1,27 +1,32 @@
-# Google Play 업로드 에셋
+# Google Play 등록 에셋
 
-기준일: 2026-07-19
+기준일: 2026-08-11
 
 | 파일 | 규격 | 용도·출처 |
 |---|---:|---|
-| icon-512.png | 512 x 512 PNG | Play 앱 아이콘 |
-| feature-graphic.png | 1024 x 500, 24-bit PNG | GPT 이미지 기반 그래픽 |
-| screenshot-01-map.png | 1080 x 2400 PNG | 실제 휴대전화 지도 |
-| screenshot-02-explore.png | 1080 x 2400 PNG | 실제 휴대전화 탐색 |
-| screenshot-03-journal.png | 1080 x 2400 PNG | 실제 휴대전화 저널 |
-| screenshot-04-profile.png | 1080 x 2400 PNG | 실제 휴대전화 프로필 |
-| screenshot-05-tablet-landscape.png | 2560 x 1600 PNG | 실제 Android 태블릿 지도 |
-| icon-512.html | 512 x 512 | 아이콘 재생성 원본 |
-| feature-graphic.html | 1024 x 500 | 그래픽 재생성 원본 |
-| store-listing.txt | 국문·영문 | Play Console 등록 문구 |
+| `icon-512.png` | 512 × 512 PNG | Play 앱 아이콘 |
+| `feature-graphic.png` | 1024 × 500, 24-bit PNG | GPT 이미지 기반 브랜드 그래픽 |
+| `screenshot-01-map.png` | 1080 × 2400 PNG | Android 16 에뮬레이터 실제 지도 화면 |
+| `screenshot-02-explore.png` | 1080 × 2400 PNG | Android 16 에뮬레이터 실제 탐색 화면 |
+| `screenshot-03-journal.png` | 1080 × 2400 PNG | Android 16 에뮬레이터 실제 기록 및 AI 작성 동작 |
+| `screenshot-04-profile.png` | 1080 × 2400 PNG | Android 16 에뮬레이터 실제 프로필 및 로컬 AI 설정 |
+| `screenshot-05-tablet-landscape.png` | 2560 × 1440 PNG | Android 16 태블릿 에뮬레이터 가로 지도 화면 |
+| `icon-512.html` | 512 × 512 | 아이콘 생성 원본 |
+| `feature-graphic.html` | 1024 × 500 | 그래픽 생성 원본 |
+| `store-listing.txt` | 국문·영문 | Play Console 등록 문구 |
 
-feature-graphic.png는 앱에 통합한 public/brand/paso-memory-trail-hero.webp를 사용해 제품의 기억 산책 콘셉트와 실제 UI의 색감을 맞췄습니다. 스크린샷은 합성 화면이 아니라 Android 에뮬레이터에서 실행한 0.2.0 `versionCode 4` 앱 화면입니다. 휴대전화 API 35와 태블릿 API 36에서 Wikidata CC0 기반 실제 장소 100건으로 다시 촬영했습니다.
+`feature-graphic.png`에는 제품의 기억 여정 콘셉트와 실제 UI의 질감을 맞추기 위해
+`public/brand/paso-memory-trail-hero.webp`를 통합했습니다. 스크린샷은 합성 이미지가
+아니라, 최종 서명된 `0.3.0` (`versionCode 6`) APK를 Android 16 에뮬레이터에서 실행하여
+다시 촬영한 결과입니다.
+
+검증 데이터는 Wikidata 기반 실제 장소 100건과 테스트 전용 더미 AI 엔드포인트·데이터만
+사용했습니다. 개인 계정, 개인 사진, 실제 기록 또는 비밀값은 촬영·저장하지 않았습니다.
+전화면은 1080 × 2400, 태블릿 화면은 2560 × 1440으로 최종 재검수까지 완료했습니다.
 
 재생성:
 
     npm run play:assets
-
-스크린샷 재검수: 2026-07-19 완료. 지도·탐색 화면에 더미 ID와 테스트 장소명이 없고 실제 장소명과 `등록 장소` 문구가 표시됩니다.
 
 개인정보처리방침:
 
