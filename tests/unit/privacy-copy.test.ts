@@ -107,6 +107,7 @@ describe("Paso 0.3.0 privacy copy", () => {
     const publishing = read("docs/mobile/store-publishing.md");
     const playGuide = read("docs/mobile/google-play-closed-testing.md");
     const handoff = read("docs/mobile/TODO-when-you-wake-up.md");
+    const report = read("docs/mobile/closed-test/evidence/report-0.3.0.md");
 
     expect(privacy).toContain("Effective and last updated: 2026-08-11");
     expect(worksheet).toContain("기준일: 2026-08-11");
@@ -124,7 +125,9 @@ describe("Paso 0.3.0 privacy copy", () => {
       expect(copy).toContain("검토 중인 변경사항");
     }
 
-    expect(handoff).toContain("빠른 검사 실행 중");
+    for (const copy of [report, handoff, worksheet, publishing, playGuide]) {
+      expect(copy).toContain("빠른 검사 완료, Google 검토 중");
+    }
     expect(worksheet).toContain("0.3.0-alpha1");
     expect(worksheet).toContain("검토 중인 변경사항");
     expect(worksheet).toContain("13개 변경사항");

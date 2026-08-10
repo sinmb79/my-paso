@@ -9,7 +9,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 - Package: `com.mypaso.app`
 - Android manifest: `versionCode 6`, `versionName 0.3.0`, `targetSdkVersion 36`
 - Privacy policy: [live 0.3.0 policy](https://sinmb79.github.io/my-paso/privacy.html), previously verified current.
-- Play Console submission: 2026-08-11 KST, Alpha release `0.3.0-alpha1` is in `검토 중인 변경사항`; rapid checks are running. The previously published Alpha version remains `0.2.0-alpha4`.
+- Play Console submission: 2026-08-11 KST, Alpha release `0.3.0-alpha1` is in `검토 중인 변경사항`; 빠른 검사 완료, Google 검토 중. The previously published Alpha version remains `0.2.0-alpha4`.
 
 ## Executed release gates
 
@@ -78,4 +78,4 @@ Normal `jarsigner` verification completed with exit 0 and reported the JAR verif
 
 ## Remaining release gates
 
-1. Monitor Play rapid checks and review outcome for Alpha `0.3.0-alpha1`.
+1. Monitor Google review approval and Alpha automatic publication for `0.3.0-alpha1`.

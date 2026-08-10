@@ -3,7 +3,7 @@
 기준일: 2026-08-11 KST
 현재 게시 버전: 0.2.0-alpha4 (versionCode 5)
 검토 중 업데이트: 0.3.0 (versionCode 6, `0.3.0-alpha1`)
-현재 상태: `검토 중인 변경사항`, 빠른 검사 실행 중
+현재 상태: `검토 중인 변경사항`, 빠른 검사 완료, Google 검토 중
 
 ## 현재 Alpha 제출 상태
 
@@ -12,7 +12,7 @@
 - [x] `Photos`와 `Other user-generated content`를 선택 사항·앱 기능 목적의 수집 Yes로, 공유 No와 전송 중 암호화 Yes로 제출했습니다.
 - [x] 새 휴대전화 4장과 수정된 태블릿 화면은 AI-generated/modified로 라벨했습니다. 기존 아이콘·feature graphic·이전 스크린샷은 라벨 대상이 아닙니다.
 - [x] Play의 비차단 경고 2건(R8/Proguard mapping 부재, native debug symbols 부재)을 확인했습니다.
-- [ ] 빠른 검사와 Google 검토 결과를 확인하고, 승인 후 Alpha 자동 게시·테스터 배포 상태를 기록합니다.
+- [ ] Google 검토 승인과 Alpha 자동 게시·테스터 배포 상태를 기록합니다.
 - [ ] 최소 12명 14일 연속 옵트인 유지, 미션·피드백·수정 증거 기록, 프로덕션 액세스 신청을 진행합니다.
 
 ## 릴리스 증거와 보안

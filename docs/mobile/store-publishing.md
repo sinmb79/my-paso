@@ -9,7 +9,7 @@
 | 패키지 ID | 준비 | com.mypaso.app |
 | 현재 게시 버전 | Alpha 게시 | 0.2.0-alpha4 / versionCode 5 |
 | 현재 출시명 | Alpha 활성 | 0.2.0-alpha4 |
-| 검토 중 업데이트 | 2026-08-11 제출·빠른 검사 실행 중 | 0.3.0 / versionCode 6 |
+| 검토 중 업데이트 | 2026-08-11 제출·빠른 검사 완료, Google 검토 중 | 0.3.0 / versionCode 6 |
 | 검토 중 출시명 | Alpha 제출 완료 | 0.3.0-alpha1 |
 | 0.3.0 후보 | 제출 완료·Google 검토 중 | versionCode 6, `검토 중인 변경사항` |
 | 최소·대상 SDK | 준비 | API 24 / API 36 |
@@ -92,7 +92,7 @@
 7. 완료: versionCode 4 실제 POI 업데이트 `0.2.0-alpha3`은 역사 Alpha 릴리스로 보존되며, 현재 Alpha 게시 버전은 versionCode 5 `0.2.0-alpha4`입니다.
 8. 완료: 2026-08-11 versionCode 6 `0.3.0-alpha1`을 Alpha에 전송했습니다. Alpha, 국·영문 등록정보, 휴대전화·7인치·10인치 스크린샷, 개인정보처리방침 URL과 Data safety를 포함한 13개 변경사항이 `검토 중인 변경사항`에 있습니다.
 9. 완료: 새 휴대전화 4장과 수정된 태블릿 스크린샷은 AI-generated/modified로 라벨했습니다. 기존 아이콘·feature graphic·이전 스크린샷에는 라벨을 붙이지 않았습니다.
-10. 남음: `0.3.0-alpha1`의 빠른 검사와 Google 검토 결과를 확인합니다.
+10. 남음: `0.3.0-alpha1`의 Google 검토 승인과 Alpha 자동 게시를 확인합니다.
 11. 남음: Console에서 현재 사용 가능 사용자와 옵트인을 다시 확인하고 최소 12명의 14일 연속 참여 및 미션·피드백 증거를 기록합니다.
 12. 남음: 연속 기간 충족 후 프로덕션 액세스를 신청합니다.
 

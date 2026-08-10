@@ -6,7 +6,7 @@
 현재 출시명: 0.2.0-alpha4
 검토 중 업데이트: 0.3.0 (versionCode 6, 2026-08-11 제출)
 검토 중 출시명: 0.3.0-alpha1
-현재 상태: `검토 중인 변경사항`, 빠른 검사 실행 중
+현재 상태: `검토 중인 변경사항`, 빠른 검사 완료, Google 검토 중
 
 ## 공식 요건 확인
 
@@ -87,7 +87,7 @@ PowerShell에서 다시 만들 때:
 | AAB 크기 | 8,277,246 bytes |
 | AAB SHA-256 | `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679` |
 | Play 배포 추정 | 신규 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0 |
-| Play 상태 | `검토 중인 변경사항`, 빠른 검사 실행 중 |
+| Play 상태 | `검토 중인 변경사항`, 빠른 검사 완료, Google 검토 중 |
 | 비차단 경고 | R8/Proguard mapping 부재, native debug symbols 부재 |
 
 ## 2. 앱 콘텐츠와 데이터 보안
@@ -131,21 +131,21 @@ store-assets/store-listing.txt의 국문을 기본 등록정보에 입력하고 
 
 ## 4. 비공개 테스트 버전 업데이트
 
-0.2.0-alpha4 versionCode 5는 현재 Alpha에 게시됐습니다. 0.3.0-alpha1 versionCode 6은 2026-08-11 같은 Alpha 트랙에 제출됐고 현재 `검토 중인 변경사항`이며 빠른 검사가 실행 중입니다. 관리형 게시를 사용하지 않으므로 승인되면 자동 출시됩니다.
+0.2.0-alpha4 versionCode 5는 현재 Alpha에 게시됐습니다. 0.3.0-alpha1 versionCode 6은 2026-08-11 같은 Alpha 트랙에 제출됐고 현재 `검토 중인 변경사항`이며 빠른 검사 완료, Google 검토 중입니다. 관리형 게시를 사용하지 않으므로 승인되면 자동 출시됩니다.
 
 1. 완료: Play Console의 비공개 테스트 Alpha 트랙을 확인하고 versionCode 6 `app-release.aab`를 업로드했습니다.
 2. 완료: 출시명을 `0.3.0-alpha1`로 지정하고 13개 변경사항을 Google 검토에 전송했습니다.
 3. 완료: 국·영문 등록정보, 개인정보처리방침 URL, Data safety와 휴대전화·7인치·10인치 스크린샷을 전송했습니다.
 4. 완료: 새 휴대전화 4장과 수정된 태블릿 화면은 AI-generated/modified 라벨로 제출했습니다. 기존 아이콘·feature graphic·이전 스크린샷은 라벨 대상이 아닙니다.
 5. 확인: 새 설치 7.44 MB, 업데이트 5.98 MB, 지원 기기 변화 0. R8/Proguard mapping 및 native debug symbols 부재 경고 2개는 비차단입니다.
-6. 남음: 빠른 검사와 versionCode 6 검토 승인 후 Alpha 자동 게시·테스터 배포 상태를 확인합니다.
+6. 남음: versionCode 6 Google 검토 승인 후 Alpha 자동 게시·테스터 배포 상태를 확인합니다.
 
 ### 0.3.0 제출 기록
 
 1. versionCode 6 미사용을 확인하고 0.3.0 AAB를 제출했습니다.
 2. 개인정보처리방침 URL: `https://sinmb79.github.io/my-paso/privacy.html`.
 3. Data safety: `Photos`와 `Other user-generated content` 수집 Yes, 선택 사항, 앱 기능; 공유 No; 전송 중 암호화 Yes.
-4. 0.3.0-alpha1은 `검토 중인 변경사항`이며 빠른 검사가 실행 중입니다.
+4. 0.3.0-alpha1은 `검토 중인 변경사항`이며 빠른 검사 완료, Google 검토 중입니다.
 
 Play App Signing의 앱 서명 키와 로컬 업로드 키는 서로 다른 역할입니다. 로컬 업로드 키와 속성 파일은 암호화된 별도 저장소에도 백업합니다.
 
