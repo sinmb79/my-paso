@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 
 import { LocalAISettings } from "@/components/ai/LocalAISettings";
+import { APP_VERSION } from "@/lib/app-version";
 import {
   exportPasoSnapshot,
   inspectPasoSnapshot,
@@ -311,7 +312,7 @@ export function ProfileTab({ model, onToast, now = new Date() }: ProfileTabProps
           개인정보처리방침
         </a>
         <p className="text-center text-xs" style={{ color: "var(--text-tertiary)" }}>
-          Hello! My Paso! v0.2.0 &middot; Local-First
+          Hello! My Paso! v{APP_VERSION} &middot; Local-First
         </p>
       </div>
 

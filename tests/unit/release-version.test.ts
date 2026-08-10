@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { APP_VERSION } from "@/lib/app-version";
+
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
@@ -46,6 +48,7 @@ describe("0.3.0 release version metadata", () => {
     const gradle = read("android/app/build.gradle");
     const releaseScript = read("scripts/build-android-release.ps1");
 
+    expect(APP_VERSION).toBe(expectedVersion);
     expect(packageJson.version).toBe(expectedVersion);
     expect(lockfile.version).toBe(expectedVersion);
     expect(lockfile.packages[""]?.version).toBe(expectedVersion);

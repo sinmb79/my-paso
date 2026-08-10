@@ -74,6 +74,7 @@ describe("json snapshot restore", () => {
     const snapshot = await exportPasoSnapshot(source);
     await deleteJournalPhoto(storedPhoto.id);
 
+    expect(snapshot.app_version).toBe("0.3.0");
     await restorePasoSnapshot(target, snapshot);
 
     const profile = await getProfile(target);

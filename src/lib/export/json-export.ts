@@ -14,6 +14,7 @@ import {
   readJournalPhotoData,
   restoreJournalPhotoData,
 } from "@/lib/media/photo-store";
+import { APP_VERSION } from "@/lib/app-version";
 
 import type {
   POI,
@@ -28,7 +29,6 @@ import type {
 
 const SNAPSHOT_VERSION = "2.1-local";
 const SCHEMA_VERSION = 2;
-const APP_VERSION = "0.2.0";
 const LEGACY_SNAPSHOT_VERSIONS = new Set(["2.0-local", "0.2.0-local"]);
 
 export type PasoSnapshotInspection = {

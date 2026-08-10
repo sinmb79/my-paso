@@ -75,6 +75,9 @@ describe("ProfileTab backup restore", () => {
 
     expect(screen.getByText("이 기기에 보관됨 · 계정 없음")).toBeInTheDocument();
     expect(
+      screen.getByText("Hello! My Paso! v0.3.0 · Local-First"),
+    ).toBeInTheDocument();
+    expect(
       container.querySelector('img[src*="paso-memory-trail-dark-v2.webp"][aria-hidden="true"]'),
     ).toBeInTheDocument();
   });
