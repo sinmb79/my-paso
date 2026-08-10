@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { getPOICategoryLabel, getPOIMarkerColor } from "@/components/map/POIMarker";
 import type { POI } from "@/types";
 
@@ -16,6 +18,17 @@ type MarkerBounds = {
   latitudeSpan: number;
   longitudeSpan: number;
 };
+
+type MarkerCluster = {
+  id: string;
+  pois: POI[];
+  position: { left: number; top: number };
+  column: number;
+  row: number;
+};
+
+const markerGridColumns = 6;
+const markerGridRows = 4;
 
 function getMarkerBounds(pois: POI[]): MarkerBounds {
   if (pois.length === 0) {
@@ -51,15 +64,50 @@ function getMarkerPosition(poi: POI, bounds: MarkerBounds) {
   };
 }
 
-function getVisibleMarkers(pois: POI[], selectedPoi: POI | null) {
-  const step = Math.max(1, Math.ceil(pois.length / 36));
-  const markers = pois.filter((_, index) => index % step === 0).slice(0, 36);
+function getMarkerClusters(pois: POI[], bounds: MarkerBounds): MarkerCluster[] {
+  const clusters = new Map<string, MarkerCluster>();
 
-  if (selectedPoi && !markers.some((poi) => poi.id === selectedPoi.id)) {
-    markers.push(selectedPoi);
+  for (const poi of pois) {
+    const position = getMarkerPosition(poi, bounds);
+    const column = Math.min(
+      markerGridColumns - 1,
+      Math.max(0, Math.floor(((position.left - 7) / 86) * markerGridColumns)),
+    );
+    const row = Math.min(
+      markerGridRows - 1,
+      Math.max(0, Math.floor(((position.top - 8) / 84) * markerGridRows)),
+    );
+    const id = `${row}-${column}`;
+    const existing = clusters.get(id);
+
+    if (existing) {
+      existing.pois.push(poi);
+      continue;
+    }
+
+    clusters.set(id, {
+      id,
+      pois: [poi],
+      position: {
+        left: 7 + (column / (markerGridColumns - 1)) * 86,
+        top: 8 + (row / (markerGridRows - 1)) * 84,
+      },
+      column,
+      row,
+    });
   }
 
-  return markers;
+  return Array.from(clusters.values()).sort(
+    (left, right) => left.row - right.row || left.column - right.column,
+  );
+}
+
+function getClusterLabel(cluster: MarkerCluster) {
+  if (cluster.pois.length === 1) {
+    return `${cluster.pois[0].name} 선택`;
+  }
+
+  return `${cluster.pois[0].name} 외 ${cluster.pois.length - 1}곳, ${cluster.pois.length}개 장소 선택`;
 }
 
 export function OfflineMapCanvas({
@@ -68,8 +116,10 @@ export function OfflineMapCanvas({
   onSelectPoi,
   fullscreen,
 }: OfflineMapCanvasProps) {
-  const markerPois = getVisibleMarkers(pois, selectedPoi);
+  const [openClusterId, setOpenClusterId] = useState<string | null>(null);
   const markerBounds = getMarkerBounds(pois);
+  const markerClusters = getMarkerClusters(pois, markerBounds);
+  const openCluster = markerClusters.find((cluster) => cluster.id === openClusterId) ?? null;
 
   return (
     <section
@@ -147,45 +197,131 @@ export function OfflineMapCanvas({
       </div>
 
       <div className="absolute inset-x-0 bottom-32 top-20">
-        {markerPois.map((poi) => {
-          const position = getMarkerPosition(poi, markerBounds);
-          const selected = poi.id === selectedPoi?.id;
-          const color = getPOIMarkerColor(poi.category);
+        {markerClusters.map((cluster) => {
+          const isCluster = cluster.pois.length > 1;
+          const selected = cluster.pois.some((poi) => poi.id === selectedPoi?.id);
+          const markerPoi = selected
+            ? cluster.pois.find((poi) => poi.id === selectedPoi?.id) ?? cluster.pois[0]
+            : cluster.pois[0];
+          const color = getPOIMarkerColor(markerPoi.category);
+          const clusterIsOpen = openClusterId === cluster.id;
 
           return (
             <button
-              key={poi.id}
+              key={cluster.id}
               type="button"
-              aria-label={`${poi.name} 선택`}
-              title={`${poi.name} · ${getPOICategoryLabel(poi.category)}`}
-              onClick={() => onSelectPoi(poi.id)}
+              aria-label={getClusterLabel(cluster)}
+              aria-controls={isCluster ? `cluster-chooser-${cluster.id}` : undefined}
+              aria-expanded={isCluster ? clusterIsOpen : undefined}
+              title={
+                isCluster
+                  ? `${cluster.pois.length}개 장소`
+                  : `${markerPoi.name} · ${getPOICategoryLabel(markerPoi.category)}`
+              }
+              onClick={() => {
+                if (isCluster) {
+                  setOpenClusterId(cluster.id);
+                  return;
+                }
+
+                onSelectPoi(markerPoi.id);
+              }}
+              onKeyDown={(event) => {
+                if (!isCluster || (event.key !== "Enter" && event.key !== " ")) {
+                  return;
+                }
+
+                event.preventDefault();
+                setOpenClusterId(cluster.id);
+              }}
               className="absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition active:scale-90"
               style={{
-                left: `${position.left}%`,
-                top: `${position.top}%`,
+                left: `${cluster.position.left}%`,
+                top: `${cluster.position.top}%`,
                 zIndex: selected ? 10 : 1,
               }}
             >
               <span
-                className={`grid place-items-center rounded-full ${
-                  selected
-                    ? "h-10 w-10 border-[3px] shadow-lg"
-                    : "h-3.5 w-3.5 border-2"
-                }`}
+                className={`h-3.5 w-3.5 rounded-full border-2 ${selected ? "ring-4 shadow-lg" : ""}`}
                 style={{
                   borderColor: selected ? color : "var(--map-marker-ring)",
-                  backgroundColor: selected ? "var(--bg-card)" : color,
+                  backgroundColor: color,
                   boxShadow: selected ? `0 8px 24px color-mix(in srgb, ${color} 38%, transparent)` : undefined,
                 }}
-              >
-                {selected ? (
-                  <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: color }} />
-                ) : null}
-              </span>
+              />
+              {isCluster ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black"
+                  style={{ backgroundColor: "var(--paso-amber)", color: "var(--accent-contrast)" }}
+                >
+                  {cluster.pois.length}
+                </span>
+              ) : null}
             </button>
           );
         })}
       </div>
+
+      {openCluster ? (
+        <div
+          id={`cluster-chooser-${openCluster.id}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="장소 선택"
+          className="absolute bottom-4 left-4 right-4 z-30 max-h-[calc(100%-2rem)] overflow-y-auto rounded-2xl border p-3 shadow-xl"
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-card)",
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                {openCluster.pois.length}개 장소 중 선택
+              </h3>
+              <p className="mt-0.5 text-xs" style={{ color: "var(--text-tertiary)" }}>
+                각 장소를 눌러 방문 기록으로 이어가세요
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="장소 선택 닫기"
+              onClick={() => setOpenClusterId(null)}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border text-lg"
+              style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+            >
+              ×
+            </button>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {openCluster.pois.map((poi) => (
+              <li key={poi.id}>
+                <button
+                  type="button"
+                  aria-label={`${poi.name} 선택`}
+                  onClick={() => {
+                    setOpenClusterId(null);
+                    onSelectPoi(poi.id);
+                  }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm font-semibold"
+                  style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border-2"
+                    style={{
+                      borderColor: "var(--map-marker-ring)",
+                      backgroundColor: getPOIMarkerColor(poi.category),
+                    }}
+                  />
+                  <span className="min-w-0 truncate">{poi.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {!selectedPoi ? (
         <div

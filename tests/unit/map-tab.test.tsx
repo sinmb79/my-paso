@@ -39,7 +39,48 @@ describe("MapTab", () => {
       />,
     );
 
-    expect(screen.getAllByRole("button", { name: /선택$/ })).toHaveLength(34);
+    expect(screen.getAllByRole("button", { name: /선택$/ }).length).toBeLessThanOrEqual(24);
+  });
+
+  it("declutters dense POIs into an accessible cluster that can select every member", () => {
+    const onSelectPoi = vi.fn();
+    const densePois = Array.from({ length: 6 }, (_, index) => ({
+      ...testPoi,
+      id: `dense-poi-${index + 1}`,
+      name: `밀집 장소 ${index + 1}`,
+    }));
+
+    render(
+      <MapTab
+        pois={densePois}
+        status="ready"
+        error={null}
+        selectedPoi={null}
+        recentVisits={[]}
+        onSelectPoi={onSelectPoi}
+        onNavigateToJournal={() => undefined}
+      />,
+    );
+
+    const cluster = screen.getByRole("button", {
+      name: "밀집 장소 1 외 5곳, 6개 장소 선택",
+    });
+    expect(screen.getAllByRole("button", { name: /선택$/ })).toHaveLength(1);
+    expect(cluster).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.keyDown(cluster, { key: "Enter" });
+
+    expect(cluster).toHaveAttribute("aria-expanded", "true");
+    const chooser = screen.getByRole("dialog", { name: "장소 선택" });
+    expect(chooser).toBeInTheDocument();
+    for (const poi of densePois) {
+      expect(
+        screen.getByRole("button", { name: `${poi.name} 선택` }),
+      ).toBeInTheDocument();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "밀집 장소 6 선택" }));
+    expect(onSelectPoi).toHaveBeenCalledWith("dense-poi-6");
   });
 
   it("uses an explicit fullscreen host without arbitrary descendant selectors", () => {
