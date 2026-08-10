@@ -59,7 +59,7 @@ describe("licensed POI seed", () => {
   it("ships a matching CC0 provenance manifest", () => {
     const seedPath = join(process.cwd(), "src", "lib", "poi", "pois.json");
     const seedHash = createHash("sha256")
-      .update(readFileSync(seedPath))
+      .update(readFileSync(seedPath, "utf8").replace(/\r\n/g, "\n"), "utf8")
       .digest("hex");
 
     expect(seedManifest).toMatchObject({
