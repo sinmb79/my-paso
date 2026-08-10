@@ -400,6 +400,84 @@ describe("local AI photo sanitizer", () => {
   });
 
   it.each([
+    [
+      "VP8X with alpha and VP8",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(2400, 1600, 0x10) },
+        { type: "ALPH", payload: [0] },
+        { type: "VP8 ", payload: vp8Payload(2400, 1600) },
+      ]),
+    ],
+    [
+      "VP8X with VP8L",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(2400, 1600) },
+        { type: "VP8L", payload: vp8lPayload(2400, 1600) },
+      ]),
+    ],
+    [
+      "VP8X with optional ICCP, EXIF, and XMP chunks",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(2400, 1600, 0x3c) },
+        { type: "ICCP", payload: [1] },
+        { type: "ALPH", payload: [0] },
+        { type: "VP8 ", payload: vp8Payload(2400, 1600) },
+        { type: "EXIF", payload: [2] },
+        { type: "XMP ", payload: [3] },
+      ]),
+    ],
+  ])("accepts a static extended WebP %s", async (_kind, bytes) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(2400, 1600);
+    const input = `data:image/webp;base64,${bytesToBase64(bytes)}`;
+
+    await expect(sanitizePhotoForLocalAI(input)).resolves.toBe(
+      "data:image/jpeg;base64,sanitized-photo",
+    );
+    expect(assignedSources).toEqual([input]);
+  });
+
+  it.each([
+    ["no image bitstream", webpExtendedRiff([{ type: "VP8X", payload: vp8xPayload(1, 1) }])],
+    [
+      "multiple image bitstreams",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+        { type: "VP8L", payload: vp8lPayload(1, 1) },
+      ]),
+    ],
+    [
+      "incompatible canvas and VP8 dimensions",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(2, 1) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    [
+      "animated VP8X flag",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1, 0x02) },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+    [
+      "ANIM chunk",
+      webpExtendedRiff([
+        { type: "VP8X", payload: vp8xPayload(1, 1) },
+        { type: "ANIM", payload: [0, 0, 0, 0, 0, 0] },
+        { type: "VP8 ", payload: vp8Payload(1, 1) },
+      ]),
+    ],
+  ])("rejects extended WebP with %s before image assignment", async (_kind, bytes) => {
+    const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
+
+    await expect(
+      sanitizePhotoForLocalAI(`data:image/webp;base64,${bytesToBase64(bytes)}`),
+    ).rejects.toThrow(/photo|dimension/i);
+    expect(assignedSources).toEqual([]);
+  });
+
+  it.each([
     [0, 1600],
     [2400, 0],
     [Number.NaN, 1600],
@@ -474,40 +552,64 @@ describe("local AI photo sanitizer", () => {
   }
 
   function webpVp8xBytes(width: number, height: number) {
-    return webpRiff("VP8X", [
-      0, 0, 0, 0,
-      ...uint24LittleEndian(width - 1),
-      ...uint24LittleEndian(height - 1),
+    return webpExtendedRiff([
+      { type: "VP8X", payload: vp8xPayload(width, height) },
+      { type: "VP8 ", payload: vp8Payload(width, height) },
     ]);
   }
 
   function webpVp8Bytes(width: number, height: number) {
-    return webpRiff("VP8 ", [
+    return webpRiff("VP8 ", vp8Payload(width, height));
+  }
+
+  function vp8Payload(width: number, height: number) {
+    return [
       0, 0, 0,
       0x9d, 0x01, 0x2a,
       ...uint16LittleEndian(width),
       ...uint16LittleEndian(height),
-    ]);
+    ];
   }
 
   function webpVp8lBytes(width: number, height: number) {
+    return webpRiff("VP8L", vp8lPayload(width, height));
+  }
+
+  function vp8lPayload(width: number, height: number) {
     const dimensions = (width - 1) | ((height - 1) << 14);
-    return webpRiff("VP8L", [
+    return [
       0x2f,
       dimensions & 0xff,
       (dimensions >>> 8) & 0xff,
       (dimensions >>> 16) & 0xff,
       (dimensions >>> 24) & 0xff,
-    ]);
+    ];
+  }
+
+  function vp8xPayload(width: number, height: number, flags = 0) {
+    return [
+      flags, 0, 0, 0,
+      ...uint24LittleEndian(width - 1),
+      ...uint24LittleEndian(height - 1),
+    ];
   }
 
   function webpRiff(chunkType: string, payload: number[]) {
-    const paddedPayload = payload.length % 2 === 0 ? payload : [...payload, 0];
+    return webpExtendedRiff([{ type: chunkType, payload }]);
+  }
+
+  function webpExtendedRiff(chunks: Array<{ type: string; payload: number[] }>) {
+    const chunkBytes = chunks.flatMap(({ type, payload }) => {
+      const paddedPayload = payload.length % 2 === 0 ? payload : [...payload, 0];
+      return [
+        ...Array.from(type, (character) => character.charCodeAt(0)),
+        ...uint32LittleEndian(payload.length),
+        ...paddedPayload,
+      ];
+    });
     const bytes = new Uint8Array([
       82, 73, 70, 70, 0, 0, 0, 0, 87, 69, 66, 80,
-      ...Array.from(chunkType, (character) => character.charCodeAt(0)),
-      ...uint32LittleEndian(payload.length),
-      ...paddedPayload,
+      ...chunkBytes,
     ]);
     setUint32LittleEndian(bytes, 4, bytes.length - 8);
     return bytes;
