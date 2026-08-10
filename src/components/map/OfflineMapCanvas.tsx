@@ -76,11 +76,12 @@ export function OfflineMapCanvas({
       className={
         fullscreen
           ? "relative h-full overflow-hidden"
-          : "relative h-[420px] overflow-hidden rounded-[1.75rem] border"
+          : "relative h-[420px] overflow-hidden rounded-[var(--surface-radius)] border"
       }
       style={{
         backgroundColor: "var(--map-land)",
         borderColor: "var(--border)",
+        boxShadow: fullscreen ? undefined : "var(--surface-shadow)",
       }}
       aria-label="오프라인 POI 지도"
     >
@@ -128,11 +129,11 @@ export function OfflineMapCanvas({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--success)" }} />
             <h2 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-              오프라인 지도
+              장소 분포도 · 길찾기용 아님
             </h2>
           </div>
           <p className="mt-0.5 text-xs" style={{ color: "var(--text-tertiary)" }}>
-            외부 API 없이 기기에서 작동 중
+            등록한 장소의 상대적 위치를 보여줘요
           </p>
         </div>
         <div className="text-right">
@@ -158,23 +159,29 @@ export function OfflineMapCanvas({
               aria-label={`${poi.name} 선택`}
               title={`${poi.name} · ${getPOICategoryLabel(poi.category)}`}
               onClick={() => onSelectPoi(poi.id)}
-              className={`absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition active:scale-90 ${
-                selected
-                  ? "h-10 w-10 border-[3px] shadow-lg"
-                  : "h-3.5 w-3.5 border-2"
-              }`}
+              className="absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition active:scale-90"
               style={{
                 left: `${position.left}%`,
                 top: `${position.top}%`,
                 zIndex: selected ? 10 : 1,
-                borderColor: selected ? color : "var(--map-marker-ring)",
-                backgroundColor: selected ? "var(--bg-card)" : color,
-                boxShadow: selected ? `0 8px 24px color-mix(in srgb, ${color} 38%, transparent)` : undefined,
               }}
             >
-              {selected ? (
-                <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: color }} />
-              ) : null}
+              <span
+                className={`grid place-items-center rounded-full ${
+                  selected
+                    ? "h-10 w-10 border-[3px] shadow-lg"
+                    : "h-3.5 w-3.5 border-2"
+                }`}
+                style={{
+                  borderColor: selected ? color : "var(--map-marker-ring)",
+                  backgroundColor: selected ? "var(--bg-card)" : color,
+                  boxShadow: selected ? `0 8px 24px color-mix(in srgb, ${color} 38%, transparent)` : undefined,
+                }}
+              >
+                {selected ? (
+                  <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: color }} />
+                ) : null}
+              </span>
             </button>
           );
         })}

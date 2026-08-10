@@ -64,8 +64,9 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <button
               key={tab.id}
               type="button"
+              aria-current={isActive ? "page" : undefined}
               onClick={() => onTabChange(tab.id)}
-              className="flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors"
+              className="flex min-h-11 flex-1 flex-col items-center justify-center gap-1 py-2.5 transition-colors"
               style={{ color: isActive ? "var(--accent)" : "var(--text-tertiary)" }}
             >
               {tab.icon}

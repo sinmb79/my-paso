@@ -74,7 +74,8 @@ describe("MapTab", () => {
       />,
     );
 
-    expect(screen.getByText("오프라인 지도")).toBeInTheDocument();
+    expect(screen.getByText("장소 분포도 · 길찾기용 아님")).toBeInTheDocument();
+    expect(screen.getByText("등록한 장소의 상대적 위치를 보여줘요")).toBeInTheDocument();
     expect(screen.queryByText("Map preview unavailable")).not.toBeInTheDocument();
     expect(screen.queryByText("마커를 눌러 장소를 선택하세요")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /테스트 문화유산 01/ }));
