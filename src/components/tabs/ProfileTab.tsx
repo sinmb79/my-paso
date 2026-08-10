@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 
+import { LocalAISettings } from "@/components/ai/LocalAISettings";
 import {
   exportPasoSnapshot,
   inspectPasoSnapshot,
@@ -267,6 +268,7 @@ export function ProfileTab({ model, onToast, now = new Date() }: ProfileTabProps
           <h3 className="mt-1 text-xl font-black" style={{ color: "var(--text-primary)" }}>내 데이터 보관</h3>
           <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>장소, 방문, 회고, 사진을 검사 가능한 로컬 백업으로 보관합니다.</p>
         </div>
+        <LocalAISettings onToast={onToast} />
         <button
           type="button"
           onClick={handleExport}

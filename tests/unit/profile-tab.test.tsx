@@ -174,4 +174,14 @@ describe("ProfileTab backup restore", () => {
     expect(screen.getByText("첫 발자국")).toBeInTheDocument();
     expect(screen.getByText("2 / 5")).toBeInTheDocument();
   });
+
+  it("mounts local AI settings under the Profile owner controls", () => {
+    render(<ProfileTab model={createJournalModel()} onToast={vi.fn()} />);
+
+    const ownerControls = screen.getByText("Owner controls");
+    const localAiHeading = screen.getByRole("heading", { name: "로컬 AI" });
+    expect(ownerControls).toBeInTheDocument();
+    expect(ownerControls.compareDocumentPosition(localAiHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "로컬 AI 사용" })).toBeInTheDocument();
+  });
 });
