@@ -41,8 +41,10 @@ function createJournalModel(): PasoJournalController {
     setSelectedPoiId: vi.fn(),
     recordVisit: vi.fn(),
     saveReview: vi.fn(),
+    toggleSaved: vi.fn(),
+    updatePoiTags: vi.fn(),
     refresh: vi.fn(),
-  } as PasoJournalController;
+  };
 }
 
 describe("HomeWorkspace storage safety", () => {

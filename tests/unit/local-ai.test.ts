@@ -234,7 +234,7 @@ describe("local AI photo sanitizer", () => {
     localStorage.clear();
   });
 
-  it.each(["image/jpeg", "image/png", "image/webp"])(
+  it.each(["image/jpeg", "image/png", "image/webp"] as const)(
     "accepts a supported %s data URL",
     async (mimeType) => {
       installPhotoSanitizerDomDouble(2400, 1600);
@@ -523,7 +523,7 @@ describe("local AI photo sanitizer", () => {
         { type: "VP8L", payload: vp8lPayload(1, 1) },
       ]),
     ],
-  ])("rejects static extended WebP flag mismatch %s before image assignment", async (_kind, bytes) => {
+  ] as Array<[string, Uint8Array]>)("rejects static extended WebP flag mismatch %s before image assignment", async (_kind, bytes) => {
     const { assignedSources } = installPhotoSanitizerDomDouble(1, 1);
 
     await expect(
@@ -769,7 +769,12 @@ describe("local AI settings persistence", () => {
       token: "must-not-persist",
       auth: "must-not-persist",
       secret: "must-not-persist",
-    } as LocalAISettings & Record<string, string>;
+    } satisfies LocalAISettings & {
+      apiKey: string;
+      token: string;
+      auth: string;
+      secret: string;
+    };
 
     await saveLocalAISettings(settings);
 

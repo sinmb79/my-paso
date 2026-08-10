@@ -632,7 +632,7 @@ describe("LocalAISettings", () => {
   });
 
   it("cancels an active connection test when the current draft becomes incompatible", async () => {
-    let requestSignal: AbortSignal | undefined;
+    let requestSignal: AbortSignal | null | undefined;
     vi.stubGlobal(
       "fetch",
       vi.fn((_url: string, init?: RequestInit) =>
