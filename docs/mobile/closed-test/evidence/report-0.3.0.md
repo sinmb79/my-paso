@@ -4,7 +4,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 
 ## Candidate metadata
 
-- Verified release HEAD: `a24b273`
+- Release base: `a24b273`; this evidence includes the final responsive model-ID and screenshot correction after that base.
 - Verification window: 2026-08-11 00:49–01:19 KST
 - Package: `com.mypaso.app`
 - Android manifest: `versionCode 6`, `versionName 0.3.0`, `targetSdkVersion 36`
@@ -15,7 +15,7 @@ Candidate: `0.3.0` (`versionCode 6`)
 
 | Gate | Command or observation | Observed evidence | Status |
 |---|---|---|---|
-| Full unit test suite | `npm test` | 287 tests across 32 files passed, exit 0 | Passed |
+| Full unit test suite | `npm test` | 288 tests across 32 files passed, exit 0 | Passed |
 | Typecheck | `npx tsc --noEmit` | exit 0 | Passed |
 | Dependency audits | `npm audit --audit-level=high` and production audit | full 0 advisories; production 0 advisories | Passed |
 | Lint | `npm run lint` | exit 0 | Passed |
@@ -25,19 +25,19 @@ Candidate: `0.3.0` (`versionCode 6`)
 | Android JVM tests | Gradle release verification | 10 / 10 passed, exit 0 | Passed |
 | Android lint | `:app:lintRelease` | `No issues found`, exit 0 | Passed |
 | Android connected tests | API 36 connected verification | 3 / 3 passed, exit 0 | Passed |
-| Signed release APK | exact final artifact | 9,265,790 bytes; SHA-256 `975DD762707C67A8ED18233D790E9D96A76DB0E70B487AD12663EF716FE5B06D` | Passed |
-| Signed release AAB | exact final artifact | 8,277,243 bytes; SHA-256 `D60D6BF7D7813174197B4B376BCBF8C0E691E3FEE1158B0CA481544C75575C2A` | Passed |
+| Signed release APK | exact final artifact | 9,265,830 bytes; SHA-256 `E04825ABEF301A4AE0822D2F1DBF980337A67DC0D3F30EDBED9D686F5F620A91` | Passed |
+| Signed release AAB | exact final artifact | 8,277,246 bytes; SHA-256 `F4F386B760F3A71F4D8BF2DDE89528B41CF93713811C475C77EC832C17584679` | Passed |
 | Artifact signing | `apksigner`, `jarsigner`, `bundletool` | signer cert SHA-256 `f5f45c6f143707bca9e61802eeab9efa921c6623f130906f905a6a0b7b6411bc`; `apksigner` exit 0; normal `jarsigner` exit 0 and jar verified; `bundletool validate` exit 0 | Passed |
 | Android package inspection | `aapt2` | package `com.mypaso.app`, version 6 / `0.3.0`, target 36 | Passed |
 | Android runtime QA | signed APK upgraded on `Medium_Phone_API_36.1` and Android 16 tablet AVD | required flows and screenshots completed | Passed |
-| Store screenshots | final files inspected | five files; phone 1080 × 2400, tablet 2560 × 1440 | Passed |
+| Store screenshots | final files inspected | five files; phone 1080 × 2400, tablet 2560 × 1440; Profile shows the full model ID and tablet app frame has no launcher dock | Passed |
 | Scope and secret scan | `git diff --check`, tracked-key extension scan, guarded credential-pattern scan | diff check exit 0; 0 tracked key/keystore files; only four expected identifier/documentation references and no credential values | Passed |
 | Play closed-test upload | Play Console | versionCode 6 availability, policy answers, upload and submission still pending | Pending |
 | GitHub publication | tag, push, GitHub Release | not yet performed | Pending |
 
 ### Signing-verification qualification
 
-Strict `jarsigner` returned exit 4 only for the expected self-signed upload-certificate and missing-timestamp warnings. Normal `jarsigner` verification completed with exit 0 and reported the JAR verified. This does not claim timestamped or CA-chain signing.
+Normal `jarsigner` verification completed with exit 0 and reported the JAR verified. Strict `jarsigner` returned exit 4 because the self-signed upload certificate has an invalid PKIX chain; missing timestamp and POSIX-permission/symlink attributes were warnings, not the signer error. This does not claim timestamped or CA-chain signing.
 
 ## Android runtime QA observations
 

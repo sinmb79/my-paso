@@ -481,6 +481,16 @@ describe("LocalAISettings", () => {
     expect(screen.getByRole("option", { name: /SK Telecom A.X/ })).toBeInTheDocument();
   });
 
+  it("gives the model-ID editor a full phone row before switching to two columns", () => {
+    render(<LocalAISettings onToast={vi.fn()} />);
+
+    const modelInput = screen.getByLabelText("모델 ID");
+    expect(modelInput).toHaveClass("w-full");
+    expect(modelInput).toHaveClass("min-w-0");
+    expect(modelInput.closest("div")).toHaveClass("grid-cols-1");
+    expect(modelInput.closest("div")).toHaveClass("sm:grid-cols-2");
+  });
+
   it("keeps a user-dirty draft when delayed saved-settings hydration arrives", async () => {
     const pendingLoad = deferred<ReturnType<typeof savedSettings> | null>();
     vi.spyOn(localAIPreferences, "loadLocalAISettings").mockReturnValue(pendingLoad.promise);

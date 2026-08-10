@@ -222,7 +222,7 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
         </label> : null}
         {endpointMessage ? <p role="alert" className="text-xs leading-relaxed" style={{ color: "var(--warning)" }}>{endpointMessage}</p> : null}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="grid gap-1.5 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
             기능
             <select value={draft.capability} onChange={(event) => changeCapability(event.target.value as LocalAICapability)} className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }}>
@@ -230,12 +230,12 @@ export function LocalAISettings({ onToast }: LocalAISettingsProps) {
               <option value="vision">텍스트 + 사진</option>
             </select>
           </label>
-          <label className="grid gap-1.5 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+          <label className="grid min-w-0 gap-1.5 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
             모델 ID
             <input value={draft.model} onChange={(event) => {
               draftDirtyRef.current = true;
               setDraft((current) => ({ ...current, model: event.target.value }));
-            }} className="min-h-11 rounded-xl border px-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+            }} className="min-h-11 min-w-0 w-full rounded-xl border px-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)" }} />
           </label>
         </div>
 
