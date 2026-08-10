@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useDeferredValue, useState, useTransition } from "react";
 
 import { getPOICategoryLabel, getPOIMarkerColor } from "@/components/map/POIMarker";
+import { withBasePath } from "@/lib/config/site";
 import type { POICategory, PlaceSummary } from "@/types";
 
 type ExploreTabProps = {
@@ -134,10 +136,21 @@ export function ExploreTab({
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-y-auto px-4 pt-5"
+      className="min-h-0 flex-1 overflow-y-auto px-4 pt-4"
       style={{ paddingBottom: "calc(var(--tab-height) + 1.25rem)" }}
     >
-      <div className="relative overflow-hidden rounded-[1.75rem] border px-5 py-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
+      <div className="relative overflow-hidden rounded-[1.75rem] border px-4 py-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}>
+        <div aria-hidden="true" className="absolute inset-0 opacity-10">
+          <Image
+            src={withBasePath("/brand/paso-memory-trail-light.webp")}
+            alt=""
+            fill
+            priority
+            unoptimized
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 520px"
+          />
+        </div>
         <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full" style={{ background: "radial-gradient(circle, var(--accent-bg) 0%, transparent 70%)" }} />
         <p className="relative text-[11px] font-black uppercase tracking-[0.22em]" style={{ color: "var(--accent)" }}>
           My local atlas
@@ -150,7 +163,7 @@ export function ExploreTab({
         </p>
       </div>
 
-      <label className="mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)", color: "var(--text-tertiary)" }}>
+      <label className="mt-3 flex min-h-11 items-center gap-3 rounded-2xl border px-4 py-2" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)", color: "var(--text-tertiary)" }}>
         <SearchIcon />
         <input
           type="search"
@@ -179,55 +192,63 @@ export function ExploreTab({
         ) : null}
       </label>
 
-      <div className="mt-3 grid grid-cols-3 rounded-2xl p-1" style={{ backgroundColor: "var(--bg-secondary)" }}>
-        {stateFilters.map((filter) => {
-          const active = filter.id === stateFilter;
-          return (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => {
-                setStateFilter(filter.id);
-                resetVisibleResults();
-              }}
-              className="rounded-xl px-2 py-2 text-xs font-bold transition"
-              style={{
-                backgroundColor: active ? "var(--bg-card)" : "transparent",
-                color: active ? "var(--text-primary)" : "var(--text-tertiary)",
-                boxShadow: active ? "0 1px 5px rgba(0,0,0,0.08)" : "none",
-              }}
-            >
-              {filter.label}
-            </button>
-          );
-        })}
-      </div>
+      <section
+        aria-label="장소 필터"
+        className="mt-3 overflow-hidden rounded-2xl border"
+        style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}
+      >
+        <div className="grid h-11 grid-cols-3 gap-1 p-1" style={{ backgroundColor: "var(--bg-secondary)" }}>
+          {stateFilters.map((filter) => {
+            const active = filter.id === stateFilter;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setStateFilter(filter.id);
+                  resetVisibleResults();
+                }}
+                className="min-w-0 rounded-xl px-2 text-xs font-bold transition"
+                style={{
+                  backgroundColor: active ? "var(--bg-card)" : "transparent",
+                  color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+                  boxShadow: active ? "0 1px 5px rgba(0,0,0,0.08)" : "none",
+                }}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-2">
-        {categories.map((category) => {
-          const active = activeCategory === category.id;
-          return (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => {
-                setActiveCategory(category.id);
-                resetVisibleResults();
-              }}
-              className="shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition"
-              style={{
-                backgroundColor: active ? "var(--accent)" : "transparent",
-                color: active ? "var(--accent-contrast)" : "var(--text-secondary)",
-                borderColor: active ? "var(--accent)" : "var(--border)",
-              }}
-            >
-              {category.label}
-            </button>
-          );
-        })}
-      </div>
+        <div className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:thin]">
+          {categories.map((category) => {
+            const active = activeCategory === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setActiveCategory(category.id);
+                  resetVisibleResults();
+                }}
+                className="h-11 shrink-0 rounded-full border px-3.5 text-xs font-bold transition"
+                style={{
+                  backgroundColor: active ? "var(--accent)" : "transparent",
+                  color: active ? "var(--accent-contrast)" : "var(--text-secondary)",
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                }}
+              >
+                {category.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-      <div className="mt-2 flex items-baseline justify-between">
+      <div className="mt-3 flex items-baseline justify-between">
         <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
           {filteredPois.length}개의 장소
         </p>

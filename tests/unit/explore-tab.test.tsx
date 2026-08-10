@@ -42,6 +42,56 @@ const places: PlaceSummary[] = [
 ];
 
 describe("ExploreTab", () => {
+  it("combines saved and nature filters in the compact accessible filter region", () => {
+    const savedNaturePlaces = Array.from({ length: 26 }, (_, index) => ({
+      ...places[1],
+      id: `saved-nature-${index + 1}`,
+      name: `저장 자연 장소 ${index + 1}`,
+      is_saved: true,
+    }));
+    const filterPlaces = [
+      ...savedNaturePlaces,
+      { ...places[0], id: "saved-cultural", name: "저장 문화 장소", is_saved: true },
+      ...Array.from({ length: 23 }, (_, index) => ({
+        ...places[1],
+        id: `unsaved-nature-${index + 1}`,
+        name: `미저장 자연 장소 ${index + 1}`,
+        is_saved: false,
+      })),
+    ];
+
+    render(
+      <ExploreTab
+        pois={filterPlaces}
+        selectedPoiId={null}
+        onSelectPoi={vi.fn()}
+        onToggleSaved={vi.fn()}
+        onUpdateTags={vi.fn()}
+        onShowOnMap={vi.fn()}
+        onToast={vi.fn()}
+      />,
+    );
+
+    const filterRegion = screen.getByRole("region", { name: "장소 필터" });
+    const savedFilter = within(filterRegion).getByRole("button", { name: "저장한 장소" });
+    const natureFilter = within(filterRegion).getByRole("button", { name: "자연" });
+
+    expect(screen.getAllByRole("button", { name: /상세 보기/ })).toHaveLength(24);
+    fireEvent.click(screen.getByRole("button", { name: "더 보기 24/50" }));
+    expect(screen.getAllByRole("button", { name: /상세 보기/ })).toHaveLength(48);
+
+    fireEvent.click(savedFilter);
+    fireEvent.click(natureFilter);
+
+    expect(savedFilter).toHaveAttribute("aria-pressed", "true");
+    expect(natureFilter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("button", { name: /상세 보기/ })).toHaveLength(24);
+    expect(screen.getByRole("button", { name: "더 보기 24/26" })).toBeInTheDocument();
+    expect(screen.getByText("저장 자연 장소 1")).toBeInTheDocument();
+    expect(screen.queryByText("저장 문화 장소")).not.toBeInTheDocument();
+    expect(screen.queryByText("미저장 자연 장소 1")).not.toBeInTheDocument();
+  });
+
   it("progressively reveals large local result sets", () => {
     const manyPlaces = Array.from({ length: 50 }, (_, index) => ({
       ...places[1],
